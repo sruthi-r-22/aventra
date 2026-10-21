@@ -218,3 +218,19 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Node & Frontend
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+
+# SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+aventra.db
+test_aventra.db
+backend/aventra.db
+backend/test_aventra.db
+
