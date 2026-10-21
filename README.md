@@ -88,16 +88,17 @@ PlanForge is Aventra's Python constraint-validation layer. Groq can interpret a 
 
 ```mermaid
 flowchart LR
-    A[Organizer request] --> B[Groq interpretation or template fallback]
-    B --> C[Revision preview]
-    C --> D[PlanForge budget and schedule checks]
-    C --> E[Paid expenses plus active vendor commitments]
-    D --> F{Feasible?}
-    E --> F
-    F -->|No| G[Show violations; reject acceptance]
-    F -->|Yes| H[Organizer chooses whether to accept]
-    H -->|Accept| I[Backend rechecks financial exposure and saves a new version]
-    H -->|Reject| J[Keep existing event plan]
+    request["Organizer request"] --> proposal["Groq proposal or template fallback"]
+    proposal --> preview["Revision preview"]
+    preview --> plan_checks["PlanForge budget and schedule checks"]
+    preview --> finance_check["Paid expenses and active vendor commitments"]
+    plan_checks --> feasible{"All checks pass?"}
+    finance_check --> feasible
+    feasible -->|No| blocked["Show violations and block acceptance"]
+    feasible -->|Yes| choice["Organizer reviews the proposal"]
+    choice -->|Accept| recheck["Backend rechecks financial exposure"]
+    recheck --> saved["Save a new plan version"]
+    choice -->|Reject| unchanged["Keep the existing event plan"]
 ```
 
 ## How it works
@@ -112,19 +113,19 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    U[Organizer] --> FE[React, TypeScript, Vite]
-    FE -->|REST API /api/v1| API[FastAPI]
-    API --> SVC[Application services]
-    SVC -->|Optional structured planning proposal| AI[Groq API]
-    AI --> SVC
-    SVC --> PF[PlanForge validator]
-    PF --> B[Budget engine]
-    PF --> T[Scheduling engine]
-    B --> PF
-    T --> PF
-    PF -->|Feasibility result| API
-    API --> ORM[SQLAlchemy]
-    ORM --> DB[(SQLite locally<br/>PostgreSQL when configured)]
+    organizer["Organizer"] --> frontend["React, TypeScript, and Vite"]
+    frontend -->|"/api/v1 REST API"| backend["FastAPI"]
+    backend --> services["Application services"]
+    services -->|Optional plan generation| groq["Groq or template fallback"]
+    groq --> services
+    services --> validator["PlanForge validator"]
+    validator --> budget["Budget engine"]
+    validator --> schedule["Scheduling engine"]
+    budget --> validator
+    schedule --> validator
+    validator -->|Feasibility result| backend
+    services --> orm["SQLAlchemy"]
+    orm --> database["SQLite locally or PostgreSQL"]
 ```
 
 The frontend uses the `/api/v1` API. FastAPI routes delegate to application services and SQLAlchemy models. PlanForge performs deterministic validation in the backend; Groq is an optional proposal-generation service, not the source of feasibility decisions.
