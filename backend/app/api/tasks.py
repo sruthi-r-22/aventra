@@ -5,9 +5,10 @@ from typing import List
 
 from app.database import get_db
 from app.models.task import Task, TaskDependency, TaskStatus
-from app.models.event import Event
+from app.models.user import User
 from app.models.plan import ActivityRecord
 from app.schemas.task import TaskCreate, TaskUpdate, TaskResponse
+from app.core.auth import get_current_user, get_user_event_or_404
 
 router = APIRouter(prefix="/events/{event_id}/tasks", tags=["tasks"])
 
@@ -34,20 +35,24 @@ def _task_to_response(task: Task) -> dict:
 
 
 @router.get("/")
-def list_tasks(event_id: str, db: Session = Depends(get_db)):
-    event = db.query(Event).filter(Event.id == event_id).first()
-    if not event:
-        raise HTTPException(status_code=404, detail="Event not found")
+def list_tasks(
+    event_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    get_user_event_or_404(db, event_id, current_user.id)
     tasks = db.query(Task).filter(Task.event_id == event_id).order_by(Task.created_at).all()
     return [_task_to_response(t) for t in tasks]
 
 
 @router.post("/", status_code=201)
-def create_task(event_id: str, data: TaskCreate, db: Session = Depends(get_db)):
-    event = db.query(Event).filter(Event.id == event_id).first()
-    if not event:
-        raise HTTPException(status_code=404, detail="Event not found")
-
+def create_task(
+    event_id: str,
+    data: TaskCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    get_user_event_or_404(db, event_id, current_user.id)
     task_data = data.model_dump(exclude={"dependency_ids"})
     task = Task(event_id=event_id, **task_data)
     db.add(task)
@@ -67,7 +72,13 @@ def create_task(event_id: str, data: TaskCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/{task_id}")
-def get_task(event_id: str, task_id: str, db: Session = Depends(get_db)):
+def get_task(
+    event_id: str,
+    task_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    get_user_event_or_404(db, event_id, current_user.id)
     task = db.query(Task).filter(Task.id == task_id, Task.event_id == event_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -75,7 +86,14 @@ def get_task(event_id: str, task_id: str, db: Session = Depends(get_db)):
 
 
 @router.put("/{task_id}")
-def update_task(event_id: str, task_id: str, data: TaskUpdate, db: Session = Depends(get_db)):
+def update_task(
+    event_id: str,
+    task_id: str,
+    data: TaskUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    get_user_event_or_404(db, event_id, current_user.id)
     task = db.query(Task).filter(Task.id == task_id, Task.event_id == event_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -89,7 +107,13 @@ def update_task(event_id: str, task_id: str, data: TaskUpdate, db: Session = Dep
 
 
 @router.delete("/{task_id}", status_code=204)
-def delete_task(event_id: str, task_id: str, db: Session = Depends(get_db)):
+def delete_task(
+    event_id: str,
+    task_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    get_user_event_or_404(db, event_id, current_user.id)
     task = db.query(Task).filter(Task.id == task_id, Task.event_id == event_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -99,7 +123,14 @@ def delete_task(event_id: str, task_id: str, db: Session = Depends(get_db)):
 
 
 @router.patch("/{task_id}/status")
-def update_task_status(event_id: str, task_id: str, status_data: dict, db: Session = Depends(get_db)):
+def update_task_status(
+    event_id: str,
+    task_id: str,
+    status_data: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    get_user_event_or_404(db, event_id, current_user.id)
     task = db.query(Task).filter(Task.id == task_id, Task.event_id == event_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -110,3 +141,25 @@ def update_task_status(event_id: str, task_id: str, status_data: dict, db: Sessi
     _log(db, event_id, f"Task '{task.name}' marked as {new_status}")
     db.commit()
     return _task_to_response(task)
+
+
+@router.post("/{task_id}/dependencies", status_code=201)
+def add_task_dependency(
+    event_id: str,
+    task_id: str,
+    data: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    get_user_event_or_404(db, event_id, current_user.id)
+    task = db.query(Task).filter(Task.id == task_id, Task.event_id == event_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    depends_on_id = data.get("depends_on_id")
+    dep_task = db.query(Task).filter(Task.id == depends_on_id, Task.event_id == event_id).first()
+    if not dep_task:
+        raise HTTPException(status_code=404, detail="Dependency task not found")
+    dep = TaskDependency(task_id=task.id, depends_on_id=depends_on_id)
+    db.add(dep)
+    db.commit()
+    return {"message": "Dependency added"}

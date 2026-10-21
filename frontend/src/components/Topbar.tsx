@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Search, Bell, ChevronDown, Calendar as CalendarIcon, Sparkles } from 'lucide-react';
+import { Search, Bell, ChevronDown, Calendar as CalendarIcon, Sparkles, LogOut, LogIn } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 interface TopbarProps {
@@ -9,6 +10,7 @@ interface TopbarProps {
 
 export default function Topbar({ onSearch }: TopbarProps) {
   const { events, activeEventId, setActiveEventId, activeEvent } = useApp();
+  const { user, isAuthenticated, logout, openAuthModal } = useAuth();
   const navigate = useNavigate();
   const [showEventDropdown, setShowEventDropdown] = useState(false);
   const [searchVal, setSearchVal] = useState('');
@@ -114,16 +116,38 @@ export default function Topbar({ onSearch }: TopbarProps) {
           <span className="w-2 h-2 rounded-full bg-[#52B9A3] absolute top-2 right-2 ring-2 ring-white" />
         </button>
 
-        {/* User profile avatar matching Aventik design */}
-        <div className="flex items-center gap-2 pl-2">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-amber-400 to-orange-500 text-white flex items-center justify-center text-[13px] font-bold shadow-xs">
-            AV
+        {/* User profile / Auth controls */}
+        {isAuthenticated && user ? (
+          <div className="flex items-center gap-2 pl-2">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-emerald-600 to-[#164B3D] text-white flex items-center justify-center text-[13px] font-bold shadow-xs">
+              {user.name.slice(0, 2).toUpperCase()}
+            </div>
+            <div className="hidden sm:block text-left leading-tight">
+              <span className="text-[13px] font-bold text-[#17252B] block truncate max-w-28">{user.name}</span>
+              <span className="text-[11px] text-gray-400 block font-medium truncate max-w-28">{user.email}</span>
+            </div>
+            <button
+              type="button"
+              onClick={async () => {
+                await logout();
+                navigate('/');
+              }}
+              title="Sign Out"
+              className="w-9 h-9 ml-1 rounded-xl border border-gray-200 flex items-center justify-center text-gray-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+            >
+              <LogOut size={15} />
+            </button>
           </div>
-          <div className="hidden sm:block text-left leading-tight">
-            <span className="text-[13px] font-bold text-[#17252B] block">Organizer 👋</span>
-            <span className="text-[11px] text-gray-400 block font-medium">Aventra Planner</span>
-          </div>
-        </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => openAuthModal('login')}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-[#164B3D] text-white rounded-xl text-xs font-bold hover:bg-[#103D32] transition-colors shadow-xs cursor-pointer"
+          >
+            <LogIn size={14} />
+            <span>Sign In</span>
+          </button>
+        )}
       </div>
     </header>
   );

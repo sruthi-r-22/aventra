@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import api from '../api/client';
+import { useAuth } from './AuthContext';
 
 export interface EventItem {
   id: string;
@@ -46,14 +47,19 @@ const AppContext = createContext<AppContextType>({
 });
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const { user, isAuthenticated } = useAuth();
   const [events, setEvents] = useState<EventItem[]>([]);
-  const [activeEventId, setActiveEventId] = useState<string | null>(
-    localStorage.getItem('activeEventId')
-  );
+  const [activeEventId, setActiveEventId] = useState<string | null>(null);
   const [activeEvent, setActiveEvent] = useState<EventItem | null>(null);
   const [loading, setLoading] = useState(false);
 
   const refreshEvents = async () => {
+    if (!isAuthenticated) {
+      setEvents([]);
+      setActiveEventId(null);
+      setActiveEvent(null);
+      return;
+    }
     try {
       setLoading(true);
       const data = await api.listEvents();
@@ -70,13 +76,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       });
     } catch (e) {
       console.error('Failed to load events', e);
+      setEvents([]);
+      setActiveEventId(null);
     } finally {
       setLoading(false);
     }
   };
 
   const refreshActiveEvent = async () => {
-    if (!activeEventId) {
+    if (!activeEventId || !isAuthenticated) {
       setActiveEvent(null);
       return;
     }
@@ -89,25 +97,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // React to login / logout state changes
   useEffect(() => {
-    refreshEvents();
-  }, []);
-
-  useEffect(() => {
-    if (activeEventId) {
-      localStorage.setItem('activeEventId', activeEventId);
-      refreshActiveEvent();
+    if (isAuthenticated) {
+      refreshEvents();
     } else {
-      localStorage.removeItem('activeEventId');
+      setEvents([]);
+      setActiveEventId(null);
       setActiveEvent(null);
     }
-  }, [activeEventId]);
+  }, [isAuthenticated, user?.id]);
+
+  useEffect(() => {
+    if (activeEventId && isAuthenticated) {
+      refreshActiveEvent();
+    } else {
+      setActiveEvent(null);
+    }
+  }, [activeEventId, isAuthenticated]);
 
   return (
-    <AppContext.Provider value={{
-      events, activeEventId, activeEvent, loading,
-      setActiveEventId, refreshEvents, refreshActiveEvent,
-    }}>
+    <AppContext.Provider
+      value={{
+        events,
+        activeEventId,
+        activeEvent,
+        loading,
+        setActiveEventId,
+        refreshEvents,
+        refreshActiveEvent,
+      }}
+    >
       {children}
     </AppContext.Provider>
   );

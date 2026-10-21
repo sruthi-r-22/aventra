@@ -31,7 +31,7 @@ app.dependency_overrides[get_db] = override_get_db
 @pytest.fixture(autouse=True)
 def setup_db():
     """Create tables before each test and drop them after."""
-    from app.models import event, budget, task, vendor, plan  # noqa
+    from app.models import user, event, budget, task, vendor, plan  # noqa
     Base.metadata.create_all(bind=engine)
     yield
     Base.metadata.drop_all(bind=engine)
@@ -39,7 +39,14 @@ def setup_db():
 
 @pytest.fixture
 def client():
-    return TestClient(app)
+    c = TestClient(app)
+    resp = c.post(
+        "/api/v1/auth/register",
+        json={"email": "testuser@example.com", "name": "Test User", "password": "password123"}
+    )
+    token = resp.json()["access_token"]
+    c.headers["Authorization"] = f"Bearer {token}"
+    return c
 
 
 @pytest.fixture

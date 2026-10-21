@@ -1,5 +1,5 @@
 """Database setup for Aventra."""
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from app.config import settings
@@ -35,17 +35,7 @@ def get_db():
 
 
 def init_db():
-    """Initialize tables and safely apply the existing SQLite compatibility change."""
-    from app.models import event, budget, task, vendor, plan  # noqa: F401
+    """Initialize tables for development and SQLite tests."""
+    from app.models import user, event, budget, task, vendor, plan  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
-
-    if engine.dialect.name == "sqlite":
-        inspector = inspect(engine)
-        if "events" in inspector.get_table_names():
-            columns = {column["name"] for column in inspector.get_columns("events")}
-            if "planning_mode" not in columns:
-                with engine.begin() as conn:
-                    conn.execute(
-                        text("ALTER TABLE events ADD COLUMN planning_mode VARCHAR DEFAULT 'ai'")
-                    )

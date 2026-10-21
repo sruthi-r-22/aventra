@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import {
   ArrowRight,
   Calendar,
@@ -23,7 +24,16 @@ import {
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const { isAuthenticated, openAuthModal } = useAuth();
   const [activeSection, setActiveSection] = useState<'home' | 'features' | 'about'>('home');
+
+  const handleGetStarted = () => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    } else {
+      openAuthModal('register');
+    }
+  };
 
   // Track active section for navbar highlighting
   useEffect(() => {
@@ -131,14 +141,34 @@ export default function LandingPage() {
 
           {/* Right: Primary Action Button */}
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => navigate('/dashboard')}
-              className="bg-[#164B3D] hover:bg-[#0F382E] text-white px-5 sm:px-6 py-2.5 rounded-full text-xs sm:text-sm font-semibold tracking-wide transition-all shadow-xs hover:shadow-md flex items-center gap-2 cursor-pointer active:scale-95"
-            >
-              <span>Get Started</span>
-              <ArrowRight size={15} />
-            </button>
+            {!isAuthenticated ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => openAuthModal('login')}
+                  className="text-xs sm:text-sm font-bold text-[#164B3D] px-3.5 py-2 hover:bg-[#E5F2EC] rounded-full transition-colors cursor-pointer"
+                >
+                  Sign In
+                </button>
+                <button
+                  type="button"
+                  onClick={handleGetStarted}
+                  className="bg-[#164B3D] hover:bg-[#0F382E] text-white px-5 sm:px-6 py-2.5 rounded-full text-xs sm:text-sm font-semibold tracking-wide transition-all shadow-xs hover:shadow-md flex items-center gap-2 cursor-pointer active:scale-95"
+                >
+                  <span>Get Started</span>
+                  <ArrowRight size={15} />
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard')}
+                className="bg-[#164B3D] hover:bg-[#0F382E] text-white px-5 sm:px-6 py-2.5 rounded-full text-xs sm:text-sm font-semibold tracking-wide transition-all shadow-xs hover:shadow-md flex items-center gap-2 cursor-pointer active:scale-95"
+              >
+                <span>Go to Dashboard</span>
+                <ArrowRight size={15} />
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -175,7 +205,7 @@ export default function LandingPage() {
               <div className="flex flex-wrap items-center gap-4 pt-2">
                 <button
                   type="button"
-                  onClick={() => navigate('/dashboard')}
+                  onClick={handleGetStarted}
                   className="bg-[#164B3D] hover:bg-[#0F382E] text-white px-7 py-3.5 rounded-full font-bold text-sm tracking-wide transition-all shadow-md hover:shadow-lg flex items-center gap-2.5 cursor-pointer active:scale-95"
                 >
                   <span>Get Started</span>
@@ -583,7 +613,7 @@ export default function LandingPage() {
             </p>
             <button
               type="button"
-              onClick={() => navigate('/dashboard')}
+              onClick={handleGetStarted}
               className="mt-7 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold text-[#164B3D] shadow-sm transition-colors hover:bg-[#E5EFE8] cursor-pointer"
             >
               <span>Start Planning</span>

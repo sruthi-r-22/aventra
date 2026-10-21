@@ -2,16 +2,38 @@
 const API_ORIGIN = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
 const BASE_URL = `${API_ORIGIN}/api/v1`;
 
+let inMemoryToken: string | null = null;
+
+export const setAuthToken = (token: string | null) => {
+  inMemoryToken = token;
+};
+
+export const getAuthToken = () => inMemoryToken;
+
 async function request<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
   const url = path.startsWith('/api/') ? `${API_ORIGIN}${path}` : `${BASE_URL}${path}`;
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string>),
+  };
+
+  if (inMemoryToken && !headers['Authorization']) {
+    headers['Authorization'] = `Bearer ${inMemoryToken}`;
+  }
+
   const response = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...options.headers },
+    credentials: 'include', // Sends HttpOnly session cookies across requests
     ...options,
+    headers,
   });
+
   if (!response.ok) {
+    if (response.status === 401 && !path.includes('/auth/login') && !path.includes('/auth/register')) {
+      window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+    }
     const err = await response.json().catch(() => ({ detail: 'Request failed' }));
     throw new Error(err.detail || `HTTP ${response.status}`);
   }
@@ -19,10 +41,19 @@ async function request<T>(
   return response.json();
 }
 
-// Events
 export const api = {
   health: () => request<any>('/api/health'),
-  
+
+  // Authentication
+  register: (data: { email: string; password: string; name: string }) =>
+    request<any>('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+  login: (data: { email: string; password: string }) =>
+    request<any>('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
+  logout: () =>
+    request<any>('/auth/logout', { method: 'POST' }),
+  getMe: () =>
+    request<any>('/auth/me'),
+
   // Events
   createEvent: (data: any) => request<any>('/events/', { method: 'POST', body: JSON.stringify(data) }),
   generateAIDraft: (data: any) => request<any>('/events/ai-draft', { method: 'POST', body: JSON.stringify(data) }),

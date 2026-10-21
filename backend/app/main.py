@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.database import init_db
-from app.api import events, budget, tasks, vendors, replan
+from app.api import auth, events, budget, tasks, vendors, replan
 
 logging.basicConfig(
     level=logging.INFO,
@@ -34,6 +34,7 @@ app.add_middleware(
 )
 
 # Include API routers
+app.include_router(auth.router, prefix="/api/v1")
 app.include_router(events.router, prefix="/api/v1")
 app.include_router(budget.router, prefix="/api/v1")
 app.include_router(tasks.router, prefix="/api/v1")

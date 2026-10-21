@@ -14,6 +14,15 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./aventra.db"
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
 
+    # JWT & Authentication
+    jwt_secret_key: str = "aventra-super-secure-production-secret-change-me"
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 1440  # 24 hours
+
+    # Cookie security settings
+    cookie_secure: bool = False  # Set to True in production (HTTPS)
+    cookie_samesite: str = "lax"  # "lax" for same-site / local, "none" for cross-site
+
     @property
     def allowed_cors_origins(self) -> List[str]:
         return [

@@ -3,15 +3,23 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.models.user import User
 from app.schemas.plan import ReplanRequest, AcceptReplanRequest
 from app.services import replan_service
+from app.core.auth import get_current_user, get_user_event_or_404
 
 router = APIRouter(prefix="/events/{event_id}/replan", tags=["replanning"])
 
 
 @router.post("/preview")
-def preview_replan(event_id: str, request: ReplanRequest, db: Session = Depends(get_db)):
+def preview_replan(
+    event_id: str,
+    request: ReplanRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """Preview the effect of replanning changes WITHOUT modifying the original plan."""
+    get_user_event_or_404(db, event_id, current_user.id)
     try:
         result = replan_service.preview_replan(
             db=db,
@@ -29,8 +37,14 @@ def preview_replan(event_id: str, request: ReplanRequest, db: Session = Depends(
 
 
 @router.post("/accept")
-def accept_replan(event_id: str, request: AcceptReplanRequest, db: Session = Depends(get_db)):
+def accept_replan(
+    event_id: str,
+    request: AcceptReplanRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """Accept a previously previewed replan and save as a new plan version."""
+    get_user_event_or_404(db, event_id, current_user.id)
     try:
         result = replan_service.accept_replan(
             db=db,
@@ -46,6 +60,11 @@ def accept_replan(event_id: str, request: AcceptReplanRequest, db: Session = Dep
 
 
 @router.get("/history")
-def get_plan_history(event_id: str, db: Session = Depends(get_db)):
-    """Get all plan versions for an event."""
+def get_plan_history(
+    event_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get all plan versions for an event owned by the authenticated user."""
+    get_user_event_or_404(db, event_id, current_user.id)
     return replan_service.get_plan_history(db, event_id)

@@ -161,7 +161,7 @@ def generate_ai_draft(event_data: AIDraftRequest) -> Dict[str, Any]:
     }
 
 
-def create_event(db: Session, event_data: EventCreate) -> Dict[str, Any]:
+def create_event(db: Session, event_data: EventCreate, user_id: Optional[str] = None) -> Dict[str, Any]:
     """
     Create a new event supporting two distinct modes:
     1. Manual Planner: Empty baseline, no LLM invoked, user adds all items manually.
@@ -173,8 +173,9 @@ def create_event(db: Session, event_data: EventCreate) -> Dict[str, Any]:
     else:
         mode_val = str(mode)
 
-    # 1. Persist the event entity
+    # 1. Persist the event entity associated with the authenticated user
     event = Event(
+        user_id=user_id,
         name=event_data.name,
         event_type=event_data.event_type.value,
         planning_mode=mode_val,
@@ -453,17 +454,26 @@ def create_event(db: Session, event_data: EventCreate) -> Dict[str, Any]:
     }
 
 
-def get_event(db: Session, event_id: str) -> Optional[Event]:
-    return db.query(Event).filter(Event.id == event_id).first()
+def get_event(db: Session, event_id: str, user_id: Optional[str] = None) -> Optional[Event]:
+    query = db.query(Event).filter(Event.id == event_id)
+    if user_id is not None:
+        query = query.filter(Event.user_id == user_id)
+    return query.first()
 
 
-def list_events(db: Session, skip: int = 0, limit: int = 50) -> List[Event]:
-    return db.query(Event).order_by(Event.created_at.desc()).offset(skip).limit(limit).all()
+def list_events(db: Session, user_id: Optional[str] = None, skip: int = 0, limit: int = 50) -> List[Event]:
+    query = db.query(Event)
+    if user_id is not None:
+        query = query.filter(Event.user_id == user_id)
+    else:
+        # If no user_id is provided, only return non-null user events or empty
+        query = query.filter(Event.user_id.isnot(None))
+    return query.order_by(Event.created_at.desc()).offset(skip).limit(limit).all()
 
 
-def get_event_summary(db: Session, event_id: str) -> Optional[Dict[str, Any]]:
+def get_event_summary(db: Session, event_id: str, user_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
     """Get comprehensive event summary with exact budget distinctions."""
-    event = get_event(db, event_id)
+    event = get_event(db, event_id, user_id=user_id)
     if not event:
         return None
 
@@ -518,8 +528,8 @@ def get_event_summary(db: Session, event_id: str) -> Optional[Dict[str, Any]]:
     }
 
 
-def update_event(db: Session, event_id: str, data: EventUpdate) -> Optional[Event]:
-    event = get_event(db, event_id)
+def update_event(db: Session, event_id: str, data: EventUpdate, user_id: Optional[str] = None) -> Optional[Event]:
+    event = get_event(db, event_id, user_id=user_id)
     if not event:
         return None
     for field, value in data.model_dump(exclude_unset=True).items():
@@ -531,8 +541,8 @@ def update_event(db: Session, event_id: str, data: EventUpdate) -> Optional[Even
     return event
 
 
-def delete_event(db: Session, event_id: str) -> bool:
-    event = get_event(db, event_id)
+def delete_event(db: Session, event_id: str, user_id: Optional[str] = None) -> bool:
+    event = get_event(db, event_id, user_id=user_id)
     if not event:
         return False
     # Safely clear task dependencies for event tasks prior to event deletion
@@ -546,9 +556,9 @@ def delete_event(db: Session, event_id: str) -> bool:
     return True
 
 
-def validate_event_plan(db: Session, event_id: str) -> Optional[Dict[str, Any]]:
+def validate_event_plan(db: Session, event_id: str, user_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
     """Run PlanForge validation on current event state."""
-    event = get_event(db, event_id)
+    event = get_event(db, event_id, user_id=user_id)
     if not event:
         return None
 

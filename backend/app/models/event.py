@@ -1,5 +1,5 @@
 """Event SQLAlchemy model."""
-from sqlalchemy import Column, String, Integer, Float, DateTime, Text, Enum
+from sqlalchemy import Column, String, Integer, Float, DateTime, Text, Enum, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum
@@ -44,10 +44,12 @@ class Event(Base):
     preferences = Column(Text, nullable=True)
     mandatory_expenses = Column(Text, nullable=True)  # JSON string
     status = Column(Enum(EventStatus), nullable=False, default=EventStatus.active)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
+    user = relationship("User", back_populates="events")
     budget_categories = relationship("BudgetCategory", back_populates="event", cascade="all, delete-orphan")
     expenses = relationship("Expense", back_populates="event", cascade="all, delete-orphan")
     tasks = relationship("Task", back_populates="event", cascade="all, delete-orphan")
