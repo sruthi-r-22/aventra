@@ -1,7 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Plus, Calendar, MapPin, Users, Trash2, ArrowRight, CheckCircle2, AlertTriangle, Sliders, Sparkles } from 'lucide-react';
+import {
+  Plus, Calendar, MapPin, Users, Trash2, ArrowRight, CheckCircle2,
+  AlertTriangle, Sliders, Sparkles, MoreHorizontal, AlertCircle
+} from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import type { EventItem } from '../context/AppContext';
 import api from '../api/client';
 import CreateEventModal from '../components/CreateEventModal';
 import { formatINR, formatDate } from '../utils/format';
@@ -11,24 +15,46 @@ export default function MyEvents() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [isModalOpen, setIsModalOpen] = useState(searchParams.get('create') === 'true');
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [eventToDelete, setEventToDelete] = useState<EventItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Close three-dot menu when clicking anywhere outside
+  useEffect(() => {
+    const handleOutsideClick = () => setMenuOpenId(null);
+    if (menuOpenId) {
+      window.addEventListener('click', handleOutsideClick);
+      return () => window.removeEventListener('click', handleOutsideClick);
+    }
+  }, [menuOpenId]);
 
   const handleSelectEvent = (id: string) => {
     setActiveEventId(id);
     navigate('/dashboard');
   };
 
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    if (!window.confirm('Are you sure you want to delete this event? This action cannot be undone.')) return;
+  const handleConfirmDelete = async () => {
+    if (!eventToDelete) return;
+    const targetId = eventToDelete.id;
     try {
-      setDeletingId(id);
-      await api.deleteEvent(id);
+      setIsDeleting(true);
+      setDeleteError(null);
+      await api.deleteEvent(targetId);
+
+      // Gracefully switch active event if the deleted one was currently selected
+      if (activeEventId === targetId) {
+        const remaining = events.filter((e) => e.id !== targetId);
+        setActiveEventId(remaining.length > 0 ? remaining[0].id : null);
+      }
+
       await refreshEvents();
-    } catch (err) {
+      setEventToDelete(null);
+    } catch (err: any) {
       console.error('Failed to delete event', err);
+      setDeleteError(err.message || 'Failed to delete event. Please try again.');
     } finally {
-      setDeletingId(null);
+      setIsDeleting(false);
     }
   };
 
@@ -75,6 +101,7 @@ export default function MyEvents() {
             const isActive = event.id === activeEventId;
             const isFeasible = event.feasibility_status === 'feasible';
             const isManual = event.planning_mode === 'manual';
+            const isMenuOpen = menuOpenId === event.id;
 
             return (
               <div
@@ -105,15 +132,42 @@ export default function MyEvents() {
                         {isFeasible ? <CheckCircle2 size={11} /> : <AlertTriangle size={11} />}
                         {event.feasibility_status}
                       </span>
-                      <button
-                        type="button"
-                        onClick={(e) => handleDelete(e, event.id)}
-                        disabled={deletingId === event.id}
-                        className="text-gray-300 hover:text-rose-600 transition-colors p-1"
-                        title="Delete event"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+
+                      {/* Three-dot menu button & dropdown */}
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMenuOpenId(isMenuOpen ? null : event.id);
+                          }}
+                          className="p-1 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+                          title="More options"
+                          aria-label="Event options menu"
+                        >
+                          <MoreHorizontal size={16} />
+                        </button>
+
+                        {isMenuOpen && (
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="absolute right-0 top-8 w-36 bg-white border border-[#E3E8E2] rounded-2xl shadow-lg py-1.5 z-30"
+                          >
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setMenuOpenId(null);
+                                setEventToDelete(event);
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors text-left cursor-pointer"
+                            >
+                              <Trash2 size={13} className="text-rose-600" />
+                              <span>Delete Event</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -162,6 +216,74 @@ export default function MyEvents() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Confirmation Dialog Modal */}
+      {eventToDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150"
+          onClick={() => {
+            if (!isDeleting) setEventToDelete(null);
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-[#E3E8E2] my-8 flex flex-col"
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 shrink-0">
+                <Trash2 size={20} />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-black text-[#17252B] tracking-tight">
+                  Delete Event
+                </h3>
+                <p className="text-xs text-gray-600 mt-2 leading-relaxed">
+                  Are you sure you want to delete <span className="font-bold text-[#17252B]">{eventToDelete.name}</span>? This action cannot be undone.
+                </p>
+                <p className="text-[11px] text-gray-400 mt-1 leading-normal">
+                  All associated tasks, budget allocations, expenses, and vendor records will be permanently deleted.
+                </p>
+              </div>
+            </div>
+
+            {deleteError && (
+              <div className="mt-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+                <AlertCircle size={14} className="shrink-0" />
+                <span>{deleteError}</span>
+              </div>
+            )}
+
+            <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setEventToDelete(null)}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleConfirmDelete}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors shadow-xs cursor-pointer disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={14} />
+                    <span>Delete Event</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

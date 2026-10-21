@@ -50,7 +50,8 @@ class Task(Base):
     dependents = relationship(
         "TaskDependency",
         foreign_keys="TaskDependency.depends_on_id",
-        back_populates="depends_on_task"
+        back_populates="depends_on_task",
+        cascade="all, delete-orphan"
     )
 
 

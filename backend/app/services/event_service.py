@@ -535,6 +535,12 @@ def delete_event(db: Session, event_id: str) -> bool:
     event = get_event(db, event_id)
     if not event:
         return False
+    # Safely clear task dependencies for event tasks prior to event deletion
+    task_ids = [t.id for t in event.tasks]
+    if task_ids:
+        db.query(TaskDependency).filter(
+            (TaskDependency.task_id.in_(task_ids)) | (TaskDependency.depends_on_id.in_(task_ids))
+        ).delete(synchronize_session=False)
     db.delete(event)
     db.commit()
     return True

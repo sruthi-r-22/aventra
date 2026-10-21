@@ -30,7 +30,7 @@ interface AppContextType {
   activeEventId: string | null;
   activeEvent: EventItem | null;
   loading: boolean;
-  setActiveEventId: (id: string | null) => void;
+  setActiveEventId: (id: string | null | ((prev: string | null) => string | null)) => void;
   refreshEvents: () => Promise<void>;
   refreshActiveEvent: () => Promise<void>;
 }
@@ -58,13 +58,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       const data = await api.listEvents();
       setEvents(data);
-      if (data.length > 0) {
-        if (!activeEventId || !data.some(e => e.id === activeEventId)) {
-          setActiveEventId(data[0].id);
+      setActiveEventId((prev) => {
+        if (data.length > 0) {
+          if (!prev || !data.some((e) => e.id === prev)) {
+            return data[0].id;
+          }
+          return prev;
+        } else {
+          return null;
         }
-      } else {
-        setActiveEventId(null);
-      }
+      });
     } catch (e) {
       console.error('Failed to load events', e);
     } finally {

@@ -127,6 +127,67 @@ class TestEventAPI:
         assert "budget" in data
         assert "scheduling" in data
 
+    def test_delete_event_success(self, client, sample_event_data):
+        create_resp = client.post("/api/v1/events/", json=sample_event_data)
+        assert create_resp.status_code == 201
+        event_id = create_resp.json()["id"]
+
+        del_resp = client.delete(f"/api/v1/events/{event_id}")
+        assert del_resp.status_code == 204
+
+        get_resp = client.get(f"/api/v1/events/{event_id}")
+        assert get_resp.status_code == 404
+
+        list_resp = client.get("/api/v1/events/")
+        assert list_resp.status_code == 200
+        assert not any(e["id"] == event_id for e in list_resp.json())
+
+    def test_delete_event_not_found(self, client):
+        del_resp = client.delete("/api/v1/events/nonexistent-id")
+        assert del_resp.status_code == 404
+
+    def test_delete_event_cascades_safely(self, client, sample_event_data):
+        create_resp = client.post("/api/v1/events/", json=sample_event_data)
+        event_id = create_resp.json()["id"]
+
+        # Add task and dependency
+        t1_resp = client.post(f"/api/v1/events/{event_id}/tasks/", json={"name": "Task 1", "priority": "high"})
+        t2_resp = client.post(f"/api/v1/events/{event_id}/tasks/", json={"name": "Task 2", "priority": "medium"})
+        t1_id = t1_resp.json()["id"]
+        t2_id = t2_resp.json()["id"]
+
+        client.post(f"/api/v1/events/{event_id}/tasks/{t2_id}/dependencies", json={"depends_on_id": t1_id})
+
+        # Add expense
+        client.post(f"/api/v1/events/{event_id}/budget/expenses", json={"name": "Test Expense", "estimated_cost": 500.0})
+
+        # Add vendor
+        client.post(f"/api/v1/events/{event_id}/vendors/", json={"category": "Catering", "vendor_name": "Test Caterer"})
+
+        # Delete event
+        del_resp = client.delete(f"/api/v1/events/{event_id}")
+        assert del_resp.status_code == 204
+
+        # Verify associated records are cleared
+        from app.models.task import Task, TaskDependency
+        from app.models.budget import BudgetCategory, Expense
+        from app.models.vendor import Vendor
+        from app.models.plan import ActivityRecord, PlanVersion
+
+        db = TestingSessionLocal()
+        try:
+            assert db.query(Task).filter(Task.event_id == event_id).count() == 0
+            assert db.query(TaskDependency).filter(
+                (TaskDependency.task_id.in_([t1_id, t2_id])) | (TaskDependency.depends_on_id.in_([t1_id, t2_id]))
+            ).count() == 0
+            assert db.query(BudgetCategory).filter(BudgetCategory.event_id == event_id).count() == 0
+            assert db.query(Expense).filter(Expense.event_id == event_id).count() == 0
+            assert db.query(Vendor).filter(Vendor.event_id == event_id).count() == 0
+            assert db.query(ActivityRecord).filter(ActivityRecord.event_id == event_id).count() == 0
+            assert db.query(PlanVersion).filter(PlanVersion.event_id == event_id).count() == 0
+        finally:
+            db.close()
+
 
 class TestBudgetAPI:
     def _create_event(self, client, data):
