@@ -14,11 +14,32 @@ export default function Tasks() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('medium');
-  const [durationDays, setDurationDays] = useState(2);
+  const [durationDays, setDurationDays] = useState('2');
   const [dueDate, setDueDate] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
   const [isMilestone, setIsMilestone] = useState(false);
   const [selectedDeps, setSelectedDeps] = useState<string[]>([]);
+
+  const resetTaskForm = () => {
+    setName('');
+    setDescription('');
+    setPriority('medium');
+    setDurationDays('2');
+    setDueDate('');
+    setAssignedTo('');
+    setIsMilestone(false);
+    setSelectedDeps([]);
+  };
+
+  const openTaskModal = () => {
+    resetTaskForm();
+    setShowModal(true);
+  };
+
+  const closeTaskModal = () => {
+    resetTaskForm();
+    setShowModal(false);
+  };
 
   const loadTasks = async () => {
     if (!activeEventId) return;
@@ -61,27 +82,25 @@ export default function Tasks() {
     e.preventDefault();
     if (!activeEventId || !name.trim()) return;
 
+    const parsedDuration = Number(durationDays);
+    if (!Number.isInteger(parsedDuration) || parsedDuration <= 0) {
+      alert('Duration must be a positive whole number.');
+      return;
+    }
+
     try {
       await api.createTask(activeEventId, {
         name: name.trim(),
         description: description.trim() || undefined,
         priority,
-        duration_days: Number(durationDays),
+        duration_days: parsedDuration,
         due_date: dueDate || undefined,
         assigned_to: assignedTo.trim() || undefined,
         is_milestone: isMilestone,
         dependency_ids: selectedDeps.length > 0 ? selectedDeps : undefined,
       });
 
-      setShowModal(false);
-      setName('');
-      setDescription('');
-      setPriority('medium');
-      setDurationDays(2);
-      setDueDate('');
-      setAssignedTo('');
-      setIsMilestone(false);
-      setSelectedDeps([]);
+      closeTaskModal();
 
       await loadTasks();
       refreshActiveEvent();
@@ -120,7 +139,7 @@ export default function Tasks() {
 
         <button
           type="button"
-          onClick={() => setShowModal(true)}
+          onClick={openTaskModal}
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#164B3D] text-white rounded-xl text-sm font-bold hover:bg-[#103D32] transition-colors shadow-xs cursor-pointer"
         >
           <Plus size={15} />
@@ -300,8 +319,10 @@ export default function Tasks() {
                   <input
                     type="number"
                     min="1"
+                    step="1"
+                    required
                     value={durationDays}
-                    onChange={(e) => setDurationDays(Number(e.target.value))}
+                    onChange={(e) => setDurationDays(e.target.value)}
                     className="w-full px-3 py-2.5 rounded-xl border border-[#E2E6DC] text-sm text-[#17252B] focus:outline-none focus:border-[#52B9A3] focus:ring-2 focus:ring-[#52B9A3]/20"
                   />
                 </div>
@@ -367,7 +388,7 @@ export default function Tasks() {
               <div className="flex justify-end gap-2 pt-3 border-t border-[#E2E6DC]">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={closeTaskModal}
                   className="px-3 py-2 rounded-xl text-sm font-bold text-[#66717A] hover:bg-[#F0F2EC]"
                 >
                   Cancel

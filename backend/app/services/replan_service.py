@@ -16,6 +16,7 @@ from app.planforge.validator import PlanForgeValidator
 from app.planforge.budget_engine import BudgetItem
 from app.planforge.scheduling_engine import ScheduleTask
 from app.services import event_service
+from app.services.financial_service import get_financial_exposure
 
 logger = logging.getLogger(__name__)
 
@@ -162,13 +163,41 @@ def preview_replan(
     )
     validation_dict = validator.to_dict(validation)
 
+    actual_expenses, vendor_commitments = get_financial_exposure(db, event_id)
+    financial_minimum = actual_expenses + vendor_commitments
+    financial_shortfall = max(0.0, financial_minimum - revised_budget)
+    financial_is_feasible = financial_shortfall == 0
+    financial_feasibility = {
+        "is_feasible": financial_is_feasible,
+        "proposed_budget": revised_budget,
+        "actual_expenses": actual_expenses,
+        "vendor_commitments": vendor_commitments,
+        "minimum_budget": financial_minimum,
+        "shortfall": financial_shortfall,
+    }
+    is_feasible = validation.is_feasible and financial_is_feasible
+    if not financial_is_feasible:
+        financial_violation = (
+            f"Existing actual expenses and booked/confirmed vendor commitments total "
+            f"₹{financial_minimum:,.0f}, exceeding the proposed budget by "
+            f"₹{financial_shortfall:,.0f}."
+        )
+        validation_dict["violations"].append(financial_violation)
+    validation_dict["financial_feasibility"] = financial_feasibility
+    validation_dict["is_feasible"] = is_feasible
+    if not is_feasible:
+        validation_dict["overall_status"] = "infeasible"
+
     # Get explanation
-    explanation = gemini_service.explain_constraint_violation(
-        violation_details=validation_dict,
-        event_name=event.name,
-    ) if not validation.is_feasible else (
-        parsed.get("summary", "Changes applied successfully.")
-    )
+    if not financial_is_feasible:
+        explanation = financial_violation
+    elif not validation.is_feasible:
+        explanation = gemini_service.explain_constraint_violation(
+            violation_details=validation_dict,
+            event_name=event.name,
+        )
+    else:
+        explanation = parsed.get("summary", "Changes applied successfully.")
 
     # Build preview
     preview = {
@@ -197,9 +226,10 @@ def preview_replan(
             "categories": revised_categories,
         },
         "changes": changes,
-        "feasibility_status": validation.overall_status,
+        "feasibility_status": validation_dict["overall_status"],
         "feasibility_details": validation_dict,
-        "is_feasible": validation.is_feasible,
+        "is_feasible": is_feasible,
+        "financial_feasibility": financial_feasibility,
         "explanation": explanation,
         "warnings": parsed.get("warnings", []),
     }
@@ -229,11 +259,26 @@ def accept_replan(
     if preview["event_id"] != event_id:
         raise ValueError("Preview token does not match event ID.")
 
+    if not preview.get("is_feasible", False):
+        raise ValueError(
+            preview.get("explanation") or "Cannot accept an infeasible plan revision."
+        )
+
     event = db.query(Event).filter(Event.id == event_id).first()
     if not event:
         raise ValueError(f"Event {event_id} not found")
 
     revised = preview["revised_plan"]
+    actual_expenses, vendor_commitments = get_financial_exposure(db, event_id)
+    financial_minimum = actual_expenses + vendor_commitments
+    proposed_budget = revised.get("total_budget", event.total_budget)
+    if proposed_budget < financial_minimum:
+        shortfall = financial_minimum - proposed_budget
+        raise ValueError(
+            f"Cannot accept this revision: existing actual expenses and booked/confirmed "
+            f"vendor commitments total ₹{financial_minimum:,.0f}, exceeding the proposed "
+            f"budget by ₹{shortfall:,.0f}."
+        )
 
     # Get current max version
     max_version = (

@@ -1,6 +1,8 @@
 """
 API integration tests using TestClient.
 """
+from datetime import date, timedelta
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -194,6 +196,34 @@ class TestReplanAPI:
         resp = client.post("/api/v1/events/", json=data)
         return resp.json()["id"]
 
+    def _add_financial_exposure(self, client, event_id):
+        expense_response = client.post(
+            f"/api/v1/events/{event_id}/budget/expenses",
+            json={
+                "name": "Recorded spending",
+                "estimated_cost": 46000,
+                "actual_cost": 46000,
+                "is_paid": True,
+            },
+        )
+        assert expense_response.status_code == 201
+
+        for status, cost in [
+            ("booked", 25000),
+            ("confirmed", 50000),
+            ("cancelled", 90000),
+            ("negotiating", 80000),
+        ]:
+            response = client.post(
+                f"/api/v1/events/{event_id}/vendors/",
+                json={
+                    "category": f"{status} vendor",
+                    "estimated_cost": cost,
+                    "booking_status": status,
+                },
+            )
+            assert response.status_code == 201
+
     def test_replan_preview_generated(self, client, sample_event_data):
         event_id = self._create_event(client, sample_event_data)
         replan_req = {
@@ -224,14 +254,203 @@ class TestReplanAPI:
         event_resp = client.get(f"/api/v1/events/{event_id}")
         assert event_resp.json()["total_budget"] == original_budget
 
+    def test_financial_minimum_blocks_infeasible_preview_and_acceptance(
+        self, client, sample_event_data
+    ):
+        event_data = {**sample_event_data, "total_budget": 300000.0}
+        event_id = self._create_event(client, event_data)
+        self._add_financial_exposure(client, event_id)
+
+        preview_response = client.post(
+            f"/api/v1/events/{event_id}/replan/preview",
+            json={
+                "change_description": "Reduce the budget to 100000",
+                "new_budget": 100000.0,
+            },
+        )
+        assert preview_response.status_code == 200
+        preview = preview_response.json()
+        assert preview["is_feasible"] is False
+        assert preview["feasibility_status"] == "infeasible"
+        assert preview["financial_feasibility"] == {
+            "is_feasible": False,
+            "proposed_budget": 100000.0,
+            "actual_expenses": 46000.0,
+            "vendor_commitments": 75000.0,
+            "minimum_budget": 121000.0,
+            "shortfall": 21000.0,
+        }
+        assert "₹21,000" in preview["explanation"]
+
+        accept_response = client.post(
+            f"/api/v1/events/{event_id}/replan/accept",
+            json={"preview_token": preview["preview_token"]},
+        )
+        assert accept_response.status_code == 400
+        event_after = client.get(f"/api/v1/events/{event_id}").json()
+        assert event_after["total_budget"] == 300000.0
+        assert event_after["event_date"] == event_data["event_date"]
+        assert event_after["guest_count"] == event_data["guest_count"]
+        history = client.get(f"/api/v1/events/{event_id}/replan/history").json()
+        assert len(history) == 1
+
+    def test_financial_exposure_is_scoped_to_the_selected_event(
+        self, client, sample_event_data
+    ):
+        obligated_event_id = self._create_event(
+            client, {**sample_event_data, "total_budget": 300000.0}
+        )
+        self._add_financial_exposure(client, obligated_event_id)
+        other_event_id = self._create_event(
+            client,
+            {
+                **sample_event_data,
+                "name": "Independent Event",
+                "planning_mode": "manual",
+                "total_budget": 300000.0,
+            },
+        )
+
+        response = client.post(
+            f"/api/v1/events/{other_event_id}/replan/preview",
+            json={
+                "change_description": "Reduce the budget to 100000",
+                "new_budget": 100000.0,
+            },
+        )
+        assert response.status_code == 200
+        financial = response.json()["financial_feasibility"]
+        assert financial["is_feasible"] is True
+        assert financial["actual_expenses"] == 0
+        assert financial["vendor_commitments"] == 0
+        assert financial["minimum_budget"] == 0
+        assert financial["shortfall"] == 0
+
+    @pytest.mark.parametrize("proposed_budget", [121000.0, 150000.0])
+    def test_financial_minimum_allows_boundary_and_higher_budgets(
+        self, client, sample_event_data, proposed_budget
+    ):
+        event_data = {
+            **sample_event_data,
+            "planning_mode": "manual",
+            "total_budget": 300000.0,
+        }
+        event_id = self._create_event(client, event_data)
+        self._add_financial_exposure(client, event_id)
+
+        response = client.post(
+            f"/api/v1/events/{event_id}/replan/preview",
+            json={
+                "change_description": f"Change the budget to {proposed_budget}",
+                "new_budget": proposed_budget,
+            },
+        )
+        assert response.status_code == 200
+        preview = response.json()
+        assert preview["financial_feasibility"]["is_feasible"] is True
+        assert preview["financial_feasibility"]["shortfall"] == 0
+        accept_response = client.post(
+            f"/api/v1/events/{event_id}/replan/accept",
+            json={"preview_token": preview["preview_token"]},
+        )
+        assert accept_response.status_code == 200
+        assert client.get(f"/api/v1/events/{event_id}").json()["total_budget"] == proposed_budget
+
+    def test_replan_preserves_schedule_constraints_and_rejects_acceptance(
+        self, client, sample_event_data
+    ):
+        event_data = {**sample_event_data, "planning_mode": "manual"}
+        event_id = self._create_event(client, event_data)
+        first_task = client.post(
+            f"/api/v1/events/{event_id}/tasks/",
+            json={"name": "Complete prerequisite", "duration_days": 3},
+        )
+        assert first_task.status_code == 201
+        dependent_task = client.post(
+            f"/api/v1/events/{event_id}/tasks/",
+            json={
+                "name": "Meet dependent deadline",
+                "duration_days": 2,
+                "due_date": (date.today() + timedelta(days=2)).isoformat(),
+                "dependency_ids": [first_task.json()["id"]],
+            },
+        )
+        assert dependent_task.status_code == 201
+
+        response = client.post(
+            f"/api/v1/events/{event_id}/replan/preview",
+            json={
+                "change_description": "Increase guest count",
+                "new_guest_count": event_data["guest_count"] + 25,
+            },
+        )
+        assert response.status_code == 200
+        preview = response.json()
+        assert preview["revised_plan"]["guest_count"] == event_data["guest_count"] + 25
+        assert preview["is_feasible"] is False
+        assert preview["feasibility_details"]["scheduling"]["is_feasible"] is False
+        assert any(
+            deadline["task_id"] == dependent_task.json()["id"]
+            for deadline in preview["feasibility_details"]["scheduling"]["impossible_deadlines"]
+        )
+
+        accept_response = client.post(
+            f"/api/v1/events/{event_id}/replan/accept",
+            json={"preview_token": preview["preview_token"]},
+        )
+        assert accept_response.status_code == 400
+        event_after = client.get(f"/api/v1/events/{event_id}").json()
+        assert event_after["guest_count"] == event_data["guest_count"]
+        assert event_after["event_date"] == event_data["event_date"]
+
+    def test_mandatory_budget_constraint_blocks_replan_acceptance(
+        self, client, sample_event_data
+    ):
+        event_data = {**sample_event_data, "planning_mode": "manual", "total_budget": 300000.0}
+        event_id = self._create_event(client, event_data)
+        category_response = client.post(
+            f"/api/v1/events/{event_id}/budget/categories",
+            json={
+                "name": "Mandatory venue",
+                "allocated_amount": 120000.0,
+                "is_mandatory": True,
+                "is_fixed": True,
+            },
+        )
+        assert category_response.status_code == 201
+
+        response = client.post(
+            f"/api/v1/events/{event_id}/replan/preview",
+            json={
+                "change_description": "Reduce the budget",
+                "new_budget": 100000.0,
+            },
+        )
+        assert response.status_code == 200
+        preview = response.json()
+        assert preview["is_feasible"] is False
+        assert preview["feasibility_details"]["budget"]["is_feasible"] is False
+
+        accept_response = client.post(
+            f"/api/v1/events/{event_id}/replan/accept",
+            json={"preview_token": preview["preview_token"]},
+        )
+        assert accept_response.status_code == 400
+        assert client.get(f"/api/v1/events/{event_id}").json()["total_budget"] == 300000.0
+
     def test_replan_accept_saves_new_version(self, client, sample_event_data):
-        """Accepting a replan should save a new plan version."""
-        event_id = self._create_event(client, sample_event_data)
+        """Feasible budget, date, and guest-count revisions can be accepted."""
+        event_data = {**sample_event_data, "planning_mode": "manual"}
+        event_id = self._create_event(client, event_data)
+        revised_date = (date.today() + timedelta(days=365)).isoformat()
         replan_req = {
-            "change_description": "Reduce budget",
+            "change_description": "Revise budget, date, and guest count",
             "new_budget": 80000.0,
+            "new_date": revised_date,
+            "new_guest_count": 75,
         }
         preview_resp = client.post(f"/api/v1/events/{event_id}/replan/preview", json=replan_req)
+        assert preview_resp.json()["is_feasible"] is True
         token = preview_resp.json()["preview_token"]
 
         accept_resp = client.post(
@@ -240,6 +459,10 @@ class TestReplanAPI:
         )
         assert accept_resp.status_code == 200
         assert accept_resp.json()["version_number"] >= 2
+        revised_event = client.get(f"/api/v1/events/{event_id}").json()
+        assert revised_event["total_budget"] == 80000.0
+        assert revised_event["event_date"] == revised_date
+        assert revised_event["guest_count"] == 75
 
     def test_get_plan_history(self, client, sample_event_data):
         event_id = self._create_event(client, sample_event_data)
@@ -340,4 +563,3 @@ class TestManualAndAIDraftPlanner:
         assert len(budget_resp.json()["categories"]) == 2
         assert budget_resp.json()["allocated_budget"] == 40000.0
         assert budget_resp.json()["unallocated_budget"] == 20000.0
-

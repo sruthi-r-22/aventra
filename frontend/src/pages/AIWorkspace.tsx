@@ -55,7 +55,7 @@ export default function AIWorkspace() {
   };
 
   const handleAcceptReplan = async () => {
-    if (!activeEventId || !preview?.preview_token) return;
+    if (!activeEventId || !preview?.preview_token || !preview.is_feasible) return;
     setLoading(true);
     setActionSuccess(null);
     setActionError(null);
@@ -82,6 +82,11 @@ export default function AIWorkspace() {
     setPreview(null);
     setActionSuccess('Proposed changes rejected. Original plan preserved unchanged.');
   };
+
+  const financialBlocked = Boolean(
+    preview?.financial_feasibility && !preview.financial_feasibility.is_feasible,
+  );
+  const acceptanceBlocked = !preview?.is_feasible;
 
   if (!activeEvent) {
     return (
@@ -248,6 +253,13 @@ export default function AIWorkspace() {
                     <p className="text-xs mt-0.5 opacity-90">
                       {preview.explanation}
                     </p>
+                    {financialBlocked && preview?.financial_feasibility && (
+                      <p role="alert" className="text-xs mt-2 font-semibold">
+                        Financial shortfall: {formatINR(preview.financial_feasibility.shortfall)}.
+                        Minimum budget: {formatINR(preview.financial_feasibility.minimum_budget)}
+                        {' '}(actual spending plus booked and confirmed vendor commitments).
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -264,13 +276,21 @@ export default function AIWorkspace() {
                   <button
                     type="button"
                     onClick={handleAcceptReplan}
-                    disabled={loading}
+                    disabled={loading || acceptanceBlocked}
                     className={`px-4 py-2 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer ${
-                      preview.is_feasible ? 'bg-[#164B3D] hover:bg-[#103D32]' : 'bg-amber-600 hover:bg-amber-700'
+                      acceptanceBlocked
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-[#164B3D] hover:bg-[#103D32]'
                     }`}
                   >
                     <Check size={14} />
-                    <span>{preview.is_feasible ? 'Accept & Apply Revision' : 'Accept Despite Conflicts'}</span>
+                    <span>
+                      {financialBlocked
+                        ? 'Cannot Accept: Financial Shortfall'
+                        : acceptanceBlocked
+                          ? 'Cannot Accept: Infeasible Revision'
+                          : 'Accept & Apply Revision'}
+                    </span>
                   </button>
                 </div>
               </div>
@@ -395,8 +415,12 @@ export default function AIWorkspace() {
                   <button
                     type="button"
                     onClick={handleAcceptReplan}
-                    disabled={loading}
-                    className="px-5 py-2 bg-[#164B3D] hover:bg-[#103D32] text-white rounded-xl font-bold shadow-xs cursor-pointer"
+                    disabled={loading || acceptanceBlocked}
+                    className={`px-5 py-2 text-white rounded-xl font-bold shadow-xs ${
+                      acceptanceBlocked
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-[#164B3D] hover:bg-[#103D32] cursor-pointer'
+                    }`}
                   >
                     Accept Revision
                   </button>

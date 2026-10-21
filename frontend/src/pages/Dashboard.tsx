@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Calendar as CalendarIcon,
@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Bell,
+  LayoutDashboard,
   Plus,
   ArrowRight,
   CheckCircle2,
@@ -52,6 +53,14 @@ function getEventHeroImage(eventType: string, eventName: string): string {
   return '/landing/wedding.jpg';
 }
 
+interface EventActivity {
+  id: string;
+  action: string;
+  entity_type?: string | null;
+  details?: string | null;
+  created_at?: string | null;
+}
+
 export default function Dashboard() {
   const { events, activeEvent, activeEventId, setActiveEventId, refreshActiveEvent, refreshEvents } =
     useApp();
@@ -62,9 +71,67 @@ export default function Dashboard() {
   const [vendors, setVendors] = useState<any[]>([]);
   const [showEventDropdown, setShowEventDropdown] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [openHeaderMenu, setOpenHeaderMenu] = useState<'notifications' | 'profile' | null>(null);
+  const headerMenuRef = useRef<HTMLDivElement>(null);
+  const [notifications, setNotifications] = useState<EventActivity[]>([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsError, setNotificationsError] = useState(false);
 
   // Mini calendar month state
   const [calendarDate, setCalendarDate] = useState<Date>(new Date());
+
+  useEffect(() => {
+    if (!openHeaderMenu) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (event.target instanceof Node && !headerMenuRef.current?.contains(event.target)) {
+        setOpenHeaderMenu(null);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpenHeaderMenu(null);
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [openHeaderMenu]);
+
+  useEffect(() => {
+    if (openHeaderMenu !== 'notifications') return;
+
+    if (!activeEventId) {
+      setNotifications([]);
+      setNotificationsLoading(false);
+      setNotificationsError(false);
+      return;
+    }
+
+    let mounted = true;
+    setNotifications([]);
+    setNotificationsLoading(true);
+    setNotificationsError(false);
+
+    api
+      .getActivities(activeEventId)
+      .then((activities: EventActivity[]) => {
+        if (mounted) setNotifications(activities);
+      })
+      .catch((error: unknown) => {
+        console.error('Failed to load notifications', error);
+        if (mounted) setNotificationsError(true);
+      })
+      .finally(() => {
+        if (mounted) setNotificationsLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [openHeaderMenu, activeEventId]);
 
   // Load event-specific details
   useEffect(() => {
@@ -306,19 +373,129 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Notifications button */}
-          <button
-            type="button"
-            className="w-10 h-10 rounded-2xl bg-white border border-[#E2E6DC] flex items-center justify-center text-[#17252B] hover:bg-gray-50 transition-colors relative shadow-2xs"
-            aria-label="Notifications"
-          >
-            <Bell size={17} />
-            <span className="w-2 h-2 rounded-full bg-rose-500 absolute top-2.5 right-2.5 ring-2 ring-white" />
-          </button>
+          <div ref={headerMenuRef} className="flex items-center gap-3">
+            {/* Notifications */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() =>
+                  setOpenHeaderMenu((current) =>
+                    current === 'notifications' ? null : 'notifications',
+                  )
+                }
+                className="w-10 h-10 rounded-2xl bg-white border border-[#E2E6DC] flex items-center justify-center text-[#164B3D] hover:bg-[#E5EFE8] transition-colors shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#52B9A3]"
+                aria-label="Notifications"
+                aria-haspopup="dialog"
+                aria-expanded={openHeaderMenu === 'notifications'}
+                aria-controls="dashboard-notifications"
+              >
+                <Bell size={17} />
+              </button>
+              {openHeaderMenu === 'notifications' && (
+                <section
+                  id="dashboard-notifications"
+                  role="dialog"
+                  aria-labelledby="dashboard-notifications-title"
+                  className="absolute right-0 top-full mt-2 z-50 w-72 max-w-[calc(100vw-3rem)] rounded-2xl border border-[#E2E6DC] bg-white p-4 shadow-xl"
+                >
+                  <h2
+                    id="dashboard-notifications-title"
+                    className="text-sm font-bold text-[#17252B]"
+                  >
+                    Notifications
+                  </h2>
+                  {notificationsLoading ? (
+                    <p role="status" className="mt-3 rounded-xl bg-[#FAF9F5] px-3 py-4 text-center text-xs text-[#66717A]">
+                      Loading notifications...
+                    </p>
+                  ) : notificationsError ? (
+                    <p role="alert" className="mt-3 rounded-xl bg-[#FAF9F5] px-3 py-4 text-center text-xs text-[#66717A]">
+                      Notifications couldn&apos;t be loaded.
+                    </p>
+                  ) : notifications.length === 0 ? (
+                    <p className="mt-3 rounded-xl bg-[#FAF9F5] px-3 py-4 text-center text-xs text-[#66717A]">
+                      No notifications yet.
+                    </p>
+                  ) : (
+                    <ul className="mt-3 max-h-72 space-y-1 overflow-y-auto">
+                      {notifications.map((activity) => (
+                        <li
+                          key={activity.id}
+                          className="rounded-xl px-3 py-2.5 transition-colors hover:bg-[#FAF9F5]"
+                        >
+                          <p className="text-xs font-semibold text-[#17252B]">{activity.action}</p>
+                          {activity.details && (
+                            <p className="mt-1 text-xs leading-relaxed text-[#66717A]">
+                              {activity.details}
+                            </p>
+                          )}
+                          {activity.created_at && (
+                            <time
+                              dateTime={activity.created_at}
+                              className="mt-1 block text-[10px] text-[#66717A]"
+                            >
+                              {new Date(activity.created_at).toLocaleString()}
+                            </time>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              )}
+            </div>
 
-          {/* User profile avatar initial */}
-          <div className="w-10 h-10 rounded-2xl bg-[#E5ECE0] text-[#164B3D] flex items-center justify-center text-sm font-bold border border-[#CCE4DA]">
-            S
+            {/* Profile menu */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() =>
+                  setOpenHeaderMenu((current) => (current === 'profile' ? null : 'profile'))
+                }
+                className="w-10 h-10 rounded-full bg-[#E5EFE8] text-[#164B3D] flex items-center justify-center text-sm font-bold border border-[#CCE4DA] hover:bg-[#D8E9E1] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#52B9A3]"
+                aria-label="Profile menu for Organizer"
+                aria-haspopup="menu"
+                aria-expanded={openHeaderMenu === 'profile'}
+                aria-controls="dashboard-profile-menu"
+              >
+                O
+              </button>
+              {openHeaderMenu === 'profile' && (
+                <div
+                  id="dashboard-profile-menu"
+                  role="menu"
+                  aria-label="Profile menu"
+                  className="absolute right-0 top-full mt-2 z-50 w-56 max-w-[calc(100vw-3rem)] rounded-2xl border border-[#E2E6DC] bg-white p-2 shadow-xl"
+                >
+                  <p className="px-3 py-2 text-sm font-bold text-[#17252B]">Organizer</p>
+                  <div className="my-1 border-t border-[#E2E6DC]" />
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setOpenHeaderMenu(null);
+                      navigate('/events');
+                    }}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm text-[#66717A] transition-colors hover:bg-[#E5EFE8] hover:text-[#164B3D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#52B9A3]"
+                  >
+                    <CalendarIcon size={15} />
+                    My Events
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setOpenHeaderMenu(null);
+                      navigate('/dashboard');
+                    }}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm text-[#66717A] transition-colors hover:bg-[#E5EFE8] hover:text-[#164B3D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#52B9A3]"
+                  >
+                    <LayoutDashboard size={15} />
+                    Dashboard
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Primary Create Event button */}

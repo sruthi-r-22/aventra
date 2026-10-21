@@ -300,6 +300,7 @@ export default function Vendors() {
                   <option value="negotiating">Negotiating</option>
                   <option value="booked">Booked</option>
                   <option value="confirmed">Confirmed</option>
+                  <option value="cancelled">Cancelled</option>
                 </select>
               </div>
 

@@ -11,6 +11,7 @@ from app.schemas.budget import (
     ExpenseCreate, ExpenseUpdate, ExpenseResponse, BudgetSummary,
 )
 from app.models.plan import ActivityRecord
+from app.services.financial_service import get_financial_exposure
 
 router = APIRouter(prefix="/events/{event_id}/budget", tags=["budget"])
 
@@ -36,22 +37,7 @@ def get_budget_summary(event_id: str, db: Session = Depends(get_db)):
     # Fetch related data
     categories = db.query(BudgetCategory).filter(BudgetCategory.event_id == event_id).all()
     expenses = db.query(Expense).filter(Expense.event_id == event_id).all()
-    # Vendor commitments: sum estimated_cost of confirmed vendors (unpaid)
-    from app.models.vendor import Vendor
-    # Include both BOOKED and CONFIRMED vendors as active commitments (exclude cancelled and others)
-    active_vendors = db.query(Vendor).filter(
-        Vendor.event_id == event_id,
-        Vendor.booking_status.in_(["booked", "confirmed"]),
-        Vendor.estimated_cost != None,
-    ).all()
-    vendor_commitments = sum(v.estimated_cost or 0 for v in active_vendors)
-
-
-    # Calculate actual expenses: only count actual_cost of paid expenses; fallback to estimated_cost if missing
-    actual_expenses = 0.0
-    for e in expenses:
-        if e.is_paid:
-            actual_expenses += e.actual_cost if e.actual_cost is not None else e.estimated_cost
+    actual_expenses, vendor_commitments = get_financial_exposure(db, event_id, expenses)
 
     # Prepare category responses with actual spent per category
     category_responses = []
