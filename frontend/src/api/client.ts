@@ -6,7 +6,8 @@ async function request<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const response = await fetch(`${BASE_URL}${path}`, {
+  const url = path.startsWith('/api/') ? `${API_ORIGIN}${path}` : `${BASE_URL}${path}`;
+  const response = await fetch(url, {
     headers: { 'Content-Type': 'application/json', ...options.headers },
     ...options,
   });
@@ -20,7 +21,7 @@ async function request<T>(
 
 // Events
 export const api = {
-  health: () => request<any>('/api/health'.replace('/api/v1', '')),
+  health: () => request<any>('/api/health'),
   
   // Events
   createEvent: (data: any) => request<any>('/events/', { method: 'POST', body: JSON.stringify(data) }),

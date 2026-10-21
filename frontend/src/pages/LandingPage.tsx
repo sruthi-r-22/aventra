@@ -196,7 +196,7 @@ export default function LandingPage() {
             {/* ─── RIGHT COLUMN: Overlapping Event Photography Collage ─── */}
             <div className="lg:col-span-7 relative min-h-[520px] sm:min-h-[580px] lg:min-h-[640px] flex items-center justify-center">
               {/* Handwritten script in top right */}
-              <div className="absolute top-0 right-2 sm:right-6 lg:right-4 z-20 text-right font-handwriting text-xl sm:text-2xl lg:text-[26px] text-[#3B4A43] leading-snug select-none rotate-[-4deg]">
+              <div className="absolute top-2 sm:top-3 lg:top-3 right-0 sm:right-2 lg:right-1 z-30 text-right font-handwriting text-xl sm:text-2xl lg:text-[26px] text-[#3B4A43] leading-snug select-none rotate-[-4deg]">
                 <p>Turn</p>
                 <p>Ideas</p>
                 <p>into</p>
@@ -306,13 +306,18 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* ── Photo 4: Festivals & Celebrations (Right Side) ── */}
-              <div className="absolute top-28 sm:top-24 right-[-10px] sm:right-2 lg:right-0 z-10 w-44 sm:w-56 lg:w-60 aspect-3/4 rounded-3xl border-4 border-white shadow-xl overflow-hidden rotate-3 group hover:rotate-0 transition-transform duration-300">
+              {/* ── Photo 4: Festivals & Celebrations (Lower Right) ── */}
+              <div className="absolute bottom-10 sm:bottom-14 lg:bottom-16 right-[-10px] sm:right-2 lg:right-0 z-10 w-44 sm:w-56 lg:w-60 aspect-3/4 rounded-3xl border-4 border-white shadow-xl overflow-hidden rotate-3 group hover:rotate-0 transition-transform duration-300">
                 <img
-                  src="/landing/festival.jpg"
-                  alt="Concert and festival celebration with crowd and lights"
+                  src="/images/festivals-celebrations.jpg"
+                  alt="Festivals & Celebrations"
                   className="w-full h-full object-cover"
                   loading="eager"
+                  onError={(e) => {
+                    // Fallback to remote URL if local asset is not found
+                    (e.target as HTMLImageElement).src =
+                      'https://i.pinimg.com/originals/cb/bc/2e/cbbc2e31f6682b2289fb2e95f9ccd278.jpg';
+                  }}
                 />
               </div>
 

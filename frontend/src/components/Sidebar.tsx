@@ -122,14 +122,28 @@ export default function Sidebar() {
 
       {/* Settings / Footer item */}
       <div className="p-4 pt-1 border-t border-[#E2E6DC]/80">
-        <button
-          type="button"
-          onClick={() => navigate('/events')}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-[#66717A] hover:text-[#17252B] hover:bg-white/50 transition-colors cursor-pointer"
+        <NavLink
+          to="/settings"
+          className={({ isActive }) =>
+            `w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all group
+            ${
+              isActive
+                ? 'bg-[#E2E8DE] text-[#164B3D] font-bold shadow-2xs'
+                : 'text-[#66717A] hover:text-[#17252B] hover:bg-white/60'
+            }`
+          }
         >
-          <Settings size={18} className="text-[#66717A]" />
-          <span>Settings</span>
-        </button>
+          {({ isActive }) => (
+            <>
+              <Settings
+                size={18}
+                strokeWidth={isActive ? 2.3 : 1.8}
+                className={isActive ? 'text-[#164B3D]' : 'text-[#66717A] group-hover:text-[#17252B]'}
+              />
+              <span>Settings</span>
+            </>
+          )}
+        </NavLink>
       </div>
     </aside>
   );

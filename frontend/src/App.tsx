@@ -10,6 +10,7 @@ import Tasks from './pages/Tasks';
 import Vendors from './pages/Vendors';
 import AIWorkspace from './pages/AIWorkspace';
 import LandingPage from './pages/LandingPage';
+import Settings from './pages/Settings';
 
 function AppLayout({ children, hideTopbar }: { children: React.ReactNode; hideTopbar?: boolean }) {
   return (
@@ -47,6 +48,7 @@ export default function App() {
           <Route path="/tasks" element={<AppLayout><Tasks /></AppLayout>} />
           <Route path="/vendors" element={<AppLayout><Vendors /></AppLayout>} />
           <Route path="/ai-workspace" element={<AppLayout><AIWorkspace /></AppLayout>} />
+          <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
 
           {/* Catch-all redirect to welcome / landing */}
           <Route path="*" element={<Navigate to="/" replace />} />
