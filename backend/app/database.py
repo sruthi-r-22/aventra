@@ -1,12 +1,24 @@
 """Database setup for Aventra."""
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from app.config import settings
 
+
+def normalize_database_url(database_url: str) -> str:
+    """Select the installed PostgreSQL driver while preserving SQLite URLs."""
+    if database_url.startswith("postgres://"):
+        return database_url.replace("postgres://", "postgresql+psycopg://", 1)
+    if database_url.startswith("postgresql://"):
+        return database_url.replace("postgresql://", "postgresql+psycopg://", 1)
+    return database_url
+
+
+DATABASE_URL = normalize_database_url(settings.database_url)
+
 engine = create_engine(
-    settings.database_url,
-    connect_args={"check_same_thread": False} if "sqlite" in settings.database_url else {}
+    DATABASE_URL,
+    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -23,18 +35,17 @@ def get_db():
 
 
 def init_db():
-    """Initialize the database by creating all tables and ensuring schema compatibility."""
+    """Initialize tables and safely apply the existing SQLite compatibility change."""
     from app.models import event, budget, task, vendor, plan  # noqa: F401
-    from sqlalchemy import text
+
     Base.metadata.create_all(bind=engine)
 
-    # Safe migration: ensure planning_mode exists in events table for existing SQLite databases
-    try:
-        with engine.connect() as conn:
-            result = conn.execute(text("PRAGMA table_info(events)"))
-            columns = [row[1] for row in result.fetchall()]
-            if columns and "planning_mode" not in columns:
-                conn.execute(text("ALTER TABLE events ADD COLUMN planning_mode VARCHAR DEFAULT 'ai'"))
-                conn.commit()
-    except Exception:
-        pass
+    if engine.dialect.name == "sqlite":
+        inspector = inspect(engine)
+        if "events" in inspector.get_table_names():
+            columns = {column["name"] for column in inspector.get_columns("events")}
+            if "planning_mode" not in columns:
+                with engine.begin() as conn:
+                    conn.execute(
+                        text("ALTER TABLE events ADD COLUMN planning_mode VARCHAR DEFAULT 'ai'")
+                    )

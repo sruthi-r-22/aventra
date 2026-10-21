@@ -170,6 +170,26 @@ aventra/
    ```
 4. Open your browser at `http://localhost:5173`.
 
+## Free Deployment Preparation
+
+The project is configured for Vercel (frontend), Render Free Web Service (API), and Neon Free PostgreSQL. No service has been created or deployed by these code changes.
+
+### Render API
+
+The root `render.yaml` sets the backend root directory, build command, start command, free plan, and health check. During Render setup, provide these environment variables:
+
+- `DATABASE_URL`: Neon PostgreSQL connection string. Credentials belong in Render's environment settings, not in source control.
+- `GROQ_API_KEY`: Your existing Groq API key, stored as a Render secret.
+- `CORS_ORIGINS`: Comma-separated exact frontend origins, for example the Vercel production domain and any preview domain you choose to allow.
+
+The backend defaults to `sqlite:///./aventra.db` for local development. PostgreSQL URLs (`postgresql://` or `postgres://`) are routed through the psycopg driver. Startup creates missing tables without dropping data; the existing `planning_mode` compatibility change is limited to SQLite.
+
+### Vercel frontend
+
+Create the Vercel project with `frontend` as its root directory. Vite's `npm run build` produces `dist`; `frontend/vercel.json` provides SPA route fallback. Set `VITE_API_URL` to the Render service's origin (scheme and host only, without `/api/v1`). The frontend appends `/api/v1` itself.
+
+Keep `VITE_API_URL` public and free of credentials. Set Groq and database secrets only in Render. For local development, leave `VITE_API_URL` unset so the Vite `/api` proxy continues targeting `http://localhost:8000`.
+
 ---
 
 ## 7. Testing & Verification

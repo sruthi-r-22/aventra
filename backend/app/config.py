@@ -1,6 +1,6 @@
 """Aventra backend configuration."""
-from pydantic_settings import BaseSettings
 from typing import List
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -12,7 +12,15 @@ class Settings(BaseSettings):
     groq_model: str = "llama-3.3-70b-versatile"
 
     database_url: str = "sqlite:///./aventra.db"
-    cors_origins: List[str] = ["http://localhost:5173", "http://localhost:3000"]
+    cors_origins: str = "http://localhost:5173,http://localhost:3000"
+
+    @property
+    def allowed_cors_origins(self) -> List[str]:
+        return [
+            origin.strip().rstrip("/")
+            for origin in self.cors_origins.split(",")
+            if origin.strip()
+        ]
 
     class Config:
         env_file = ".env"
