@@ -34,7 +34,7 @@ export default function MiniCalendar({ highlightDate }: Props) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-xs">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-[14px] font-bold text-[#1a2b4a]">
+        <h3 className="text-[14px] font-bold text-[#17252B]">
           {MONTHS[month]}, {year}
         </h3>
         <div className="flex items-center gap-1">
@@ -64,7 +64,7 @@ export default function MiniCalendar({ highlightDate }: Props) {
           <div
             key={i}
             className={`text-center text-[12px] h-7 w-7 mx-auto rounded-full font-medium leading-none flex items-center justify-center transition-colors
-              ${d === null ? '' : isHighlight(d) ? 'bg-blue-600 text-white font-bold shadow-xs' : isToday(d) ? 'bg-blue-50 text-blue-600 font-bold' : 'text-gray-600 hover:bg-gray-100 cursor-pointer'}
+              ${d === null ? '' : isHighlight(d) ? 'bg-[#164B3D] text-white font-bold shadow-xs' : isToday(d) ? 'bg-[#E5EFE8] text-[#164B3D] font-bold' : 'text-gray-600 hover:bg-gray-100 cursor-pointer'}
             `}
           >
             {d}

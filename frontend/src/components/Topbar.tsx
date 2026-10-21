@@ -19,7 +19,7 @@ export default function Topbar({ onSearch }: TopbarProps) {
   };
 
   return (
-    <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-8 shrink-0 z-20">
+    <header className="h-16 bg-[#FAF9F5] border-b border-[#E2E6DC] flex items-center justify-between px-8 shrink-0 z-20">
       {/* Search Input */}
       <div className="relative w-72">
         <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -28,7 +28,7 @@ export default function Topbar({ onSearch }: TopbarProps) {
           placeholder="Search..."
           value={searchVal}
           onChange={handleSearchChange}
-          className="w-full pl-9 pr-4 py-2 bg-gray-50/80 border border-transparent rounded-xl text-[13px] text-gray-700 placeholder-gray-400 focus:bg-white focus:border-gray-200 focus:outline-none transition-all"
+          className="w-full pl-9 pr-4 py-2 bg-white border border-[#E2E6DC] rounded-xl text-[13px] text-[#17252B] placeholder-gray-400 focus:bg-white focus:border-[#52B9A3] focus:outline-none transition-all"
         />
       </div>
 
@@ -39,9 +39,9 @@ export default function Topbar({ onSearch }: TopbarProps) {
           <button
             type="button"
             onClick={() => setShowEventDropdown(!showEventDropdown)}
-            className="flex items-center gap-2 px-3.5 py-2 bg-gray-50 hover:bg-gray-100/80 rounded-xl text-[13px] font-semibold text-[#1a2b4a] border border-gray-100 transition-colors"
+            className="flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-gray-50 rounded-xl text-[13px] font-semibold text-[#17252B] border border-[#E2E6DC] transition-colors"
           >
-            <CalendarIcon size={14} className="text-blue-600" />
+            <CalendarIcon size={14} className="text-[#164B3D]" />
             <span className="max-w-44 truncate">
               {activeEvent?.name || (events.length > 0 ? 'Select Event' : 'No Events')}
             </span>
@@ -62,7 +62,9 @@ export default function Topbar({ onSearch }: TopbarProps) {
                     setShowEventDropdown(false);
                   }}
                   className={`w-full text-left px-3.5 py-2.5 text-[13px] flex items-center justify-between hover:bg-gray-50 transition-colors ${
-                    e.id === activeEventId ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-700'
+                    e.id === activeEventId
+                      ? 'bg-[#E5EFE8] text-[#164B3D] font-semibold'
+                      : 'text-[#66717A]'
                   }`}
                 >
                   <div className="truncate">
@@ -83,7 +85,7 @@ export default function Topbar({ onSearch }: TopbarProps) {
                     setShowEventDropdown(false);
                     navigate('/events?create=true');
                   }}
-                  className="w-full text-center py-2 text-[12px] font-semibold text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  className="w-full text-center py-2 text-[12px] font-semibold text-[#164B3D] hover:bg-[#E5EFE8] rounded-lg transition-colors"
                 >
                   + Create New Event
                 </button>
@@ -96,9 +98,9 @@ export default function Topbar({ onSearch }: TopbarProps) {
         <button
           type="button"
           onClick={() => navigate('/ai-workspace')}
-          className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-600 border border-blue-200/60 rounded-xl text-[12px] font-semibold hover:from-blue-100 hover:to-indigo-100 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-2 bg-[#E5EFE8] text-[#164B3D] border border-[#CCE4DA] rounded-xl text-[12px] font-semibold hover:bg-[#D8E9E1] transition-colors"
         >
-          <Sparkles size={14} className="text-blue-500" />
+          <Sparkles size={14} className="text-[#52B9A3]" />
           <span>AI Replan</span>
         </button>
 
@@ -109,7 +111,7 @@ export default function Topbar({ onSearch }: TopbarProps) {
           aria-label="Notifications"
         >
           <Bell size={16} />
-          <span className="w-2 h-2 rounded-full bg-blue-600 absolute top-2 right-2 ring-2 ring-white" />
+          <span className="w-2 h-2 rounded-full bg-[#52B9A3] absolute top-2 right-2 ring-2 ring-white" />
         </button>
 
         {/* User profile avatar matching Aventik design */}
@@ -118,7 +120,7 @@ export default function Topbar({ onSearch }: TopbarProps) {
             AV
           </div>
           <div className="hidden sm:block text-left leading-tight">
-            <span className="text-[13px] font-bold text-[#1a2b4a] block">Organizer 👋</span>
+            <span className="text-[13px] font-bold text-[#17252B] block">Organizer 👋</span>
             <span className="text-[11px] text-gray-400 block font-medium">Aventra Planner</span>
           </div>
         </div>

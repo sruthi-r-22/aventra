@@ -85,7 +85,7 @@ export default function Timeline() {
     return (
       <div className="p-8 max-w-5xl mx-auto text-center py-16">
         <Clock size={36} className="mx-auto text-gray-400 mb-2" />
-        <h3 className="text-lg font-bold text-[#1a2b4a]">No event selected</h3>
+        <h3 className="text-lg font-bold text-[#17252B]">No event selected</h3>
         <p className="text-xs text-gray-500 mt-1">Please select an event to view its timeline.</p>
       </div>
     );
@@ -99,7 +99,7 @@ export default function Timeline() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-[#1a2b4a] tracking-tight">Timeline & Milestones</h1>
+          <h1 className="text-2xl font-black text-[#17252B] tracking-tight">Timeline & Milestones</h1>
           <p className="text-xs font-semibold text-gray-500 mt-0.5">
             PlanForge topological schedule ordering & dependency graphs for {activeEvent.name}
           </p>
@@ -109,7 +109,7 @@ export default function Timeline() {
           <span className="text-xs font-bold text-gray-500 bg-white border border-gray-200 px-3 py-1.5 rounded-xl shadow-2xs">
             Event Date: {formatDate(activeEvent.event_date)}
           </span>
-          <span className="text-xs font-bold text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-xl">
+          <span className="text-xs font-bold text-[#164B3D] bg-[#E5EFE8] border border-[#CCE4DA] px-3 py-1.5 rounded-xl">
             {activeEvent.days_remaining} Days Remaining
           </span>
         </div>
@@ -141,9 +141,9 @@ export default function Timeline() {
       )}
 
       {/* Timeline Gantt Flow */}
-      <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-xs space-y-6">
-        <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-          <h3 className="text-sm font-bold text-[#1a2b4a]">Task Execution Sequence</h3>
+      <div className="bg-white rounded-3xl border border-[#E3E8E2] p-6 shadow-xs space-y-6">
+        <div className="flex items-center justify-between pb-3 border-b border-[#E3E8E2]">
+          <h3 className="text-sm font-bold text-[#17252B]">Task Execution Sequence</h3>
           <span className="text-xs text-gray-400 font-semibold">{tasks.length} Tracked Tasks</span>
         </div>
 
@@ -152,7 +152,7 @@ export default function Timeline() {
             No tasks found. Create tasks or generate a plan from the AI Workspace.
           </div>
         ) : (
-          <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-blue-100">
+          <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-[#E5EFE8]">
             {tasks.map((task, idx) => {
               const isImpossible = impossibleDeadlines.some((d: any) => d.task_id === task.id);
               const isCompleted = task.status === 'completed';
@@ -167,18 +167,18 @@ export default function Timeline() {
                       ? 'bg-rose-500 text-white'
                       : task.is_milestone
                       ? 'bg-amber-500 text-white'
-                      : 'bg-blue-600 text-white'
+                      : 'bg-[#164B3D] text-white'
                   }`}>
                     {task.is_milestone ? <Milestone size={10} /> : idx + 1}
                   </div>
 
                   {/* Task Card */}
                   <div className={`flex-1 bg-gray-50/80 hover:bg-white border rounded-2xl p-4.5 transition-all shadow-2xs hover:shadow-xs ${
-                    isImpossible ? 'border-rose-300 bg-rose-50/30' : 'border-gray-100 hover:border-blue-100'
+                    isImpossible ? 'border-rose-300 bg-rose-50/30' : 'border-[#E3E8E2] hover:border-[#B8D9CF]'
                   }`}>
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-[#1a2b4a]">{task.name}</span>
+                        <span className="text-sm font-bold text-[#17252B]">{task.name}</span>
                         {task.is_milestone && (
                           <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full flex items-center gap-1">
                             <Flag size={10} /> Milestone
@@ -200,7 +200,7 @@ export default function Timeline() {
                           isCompleted
                             ? 'bg-emerald-100 text-emerald-800'
                             : task.status === 'in_progress'
-                            ? 'bg-blue-100 text-blue-800'
+                            ? 'bg-[#E5EFE8] text-[#164B3D]'
                             : 'bg-gray-100 text-gray-600'
                         }`}>
                           {task.status}
@@ -217,7 +217,7 @@ export default function Timeline() {
                     {/* Dependencies indicator */}
                     {task.dependency_ids && task.dependency_ids.length > 0 && (
                       <div className="mt-3 pt-2.5 border-t border-gray-100 text-[11px] text-gray-500 flex items-center gap-1.5">
-                        <ChevronRight size={12} className="text-blue-500" />
+                        <ChevronRight size={12} className="text-[#52B9A3]" />
                         <span className="font-semibold text-gray-700">Depends on:</span>
                         <span>{task.dependency_ids.length} prerequisite task(s)</span>
                       </div>

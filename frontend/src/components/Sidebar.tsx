@@ -1,7 +1,14 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Calendar, Wallet, Clock, CheckSquare,
-  Users, Sparkles, ChevronRight, Plus, Activity,
+  LayoutDashboard,
+  Calendar,
+  Wallet,
+  Clock,
+  CheckSquare,
+  Users,
+  Sparkles,
+  Settings,
+  ArrowRight,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
@@ -12,99 +19,116 @@ export default function Sidebar() {
   const navItems = [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/events', icon: Calendar, label: 'My Events' },
-    { to: '/budget', icon: Wallet, label: 'Budget' },
-    { to: '/timeline', icon: Clock, label: 'Timeline' },
     {
       to: '/tasks',
       icon: CheckSquare,
       label: 'Tasks',
       badge: activeEvent ? `${activeEvent.task_count - activeEvent.completed_tasks}` : undefined,
     },
+    { to: '/timeline', icon: Clock, label: 'Timeline' },
+    { to: '/budget', icon: Wallet, label: 'Budget' },
     { to: '/vendors', icon: Users, label: 'Vendors' },
-    { to: '/ai-workspace', icon: Sparkles, label: 'AI Workspace', isAi: true },
+    { to: '/ai-workspace', icon: Sparkles, label: 'AI Workspace' },
   ];
 
   return (
-    <aside className="w-60 min-h-screen bg-white border-r border-gray-100 flex flex-col shrink-0 select-none">
-      {/* Brand Logo matching Aventik reference typography */}
-      <div className="px-6 py-6 border-b border-gray-100/80 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-sky-400 flex items-center justify-center shadow-xs">
-          <Activity size={18} className="text-white" strokeWidth={2.5} />
+    <aside className="w-64 min-h-screen bg-[#F0F2EC] border-r border-[#E2E6DC] flex flex-col shrink-0 select-none transition-colors">
+      {/* Brand Logo matching Aventra reference design */}
+      <div
+        onClick={() => navigate('/welcome')}
+        className="px-6 py-6 flex items-center gap-3 cursor-pointer group"
+        title="Go to Welcome Page"
+      >
+        {/* Dual organic pebble / leaf logo icon */}
+        <div className="relative w-8 h-8 flex items-center justify-center shrink-0">
+          <div className="absolute left-0 top-0 w-5 h-7 bg-[#164B3D] rounded-[50%_50%_50%_50%/70%_70%_30%_30%] -rotate-12 transition-transform group-hover:scale-105" />
+          <div className="absolute right-0 bottom-0 w-4 h-6 bg-[#52B9A3] rounded-[50%_50%_50%_50%/30%_30%_70%_70%] opacity-90 transition-transform group-hover:scale-105" />
         </div>
-        <div>
-          <span className="text-[17px] font-black text-[#1a2b4a] tracking-tight">Aventra</span>
-          <p className="text-[10px] text-gray-400 font-semibold tracking-wider uppercase leading-none mt-0.5">PlanForge</p>
+
+        <div className="flex flex-col">
+          <span className="text-xl font-bold tracking-tight text-[#17252B] leading-none">
+            Aventra
+          </span>
+          <span className="text-[10px] text-[#66717A] font-medium tracking-wide mt-1">
+            Powered by PlanForge
+          </span>
         </div>
       </div>
 
       {/* Main Navigation */}
-      <nav className="flex-1 px-3 py-5 space-y-1" aria-label="Main navigation">
-        {navItems.map(({ to, icon: Icon, label, badge, isAi }) => (
+      <nav className="flex-1 px-4 py-4 space-y-1.5" aria-label="Main navigation">
+        {navItems.map(({ to, icon: Icon, label, badge }) => (
           <NavLink
             key={to}
             to={to}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[13px] font-semibold transition-all relative group
-              ${isActive
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+              `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all relative group
+              ${
+                isActive
+                  ? 'bg-[#E2E8DE] text-[#164B3D] font-bold shadow-2xs'
+                  : 'text-[#66717A] hover:bg-white/60 hover:text-[#17252B]'
               }`
             }
           >
             {({ isActive }) => (
               <>
-                <Icon size={17} strokeWidth={isActive ? 2.2 : 1.8} className={isActive ? 'text-white' : isAi ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-600'} />
+                <Icon
+                  size={18}
+                  strokeWidth={isActive ? 2.3 : 1.8}
+                  className={isActive ? 'text-[#164B3D]' : 'text-[#66717A] group-hover:text-[#17252B]'}
+                />
                 <span className="flex-1 truncate">{label}</span>
-                {badge && (
-                  <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-600'
-                  }`}>
+                {badge && Number(badge) > 0 && (
+                  <span
+                    className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${
+                      isActive
+                        ? 'bg-[#164B3D]/10 text-[#164B3D]'
+                        : 'bg-[#E2E8DE] text-[#66717A]'
+                    }`}
+                  >
                     {badge}
                   </span>
                 )}
-                {isActive && !badge && <ChevronRight size={14} className="text-white/70" />}
               </>
             )}
           </NavLink>
         ))}
       </nav>
 
-      {/* Active Event Card matching Aventik reference blue card style */}
-      {activeEvent && (
-        <div className="px-3 pb-3">
-          <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-4 text-white shadow-sm relative overflow-hidden">
-            <div className="absolute -right-4 -bottom-4 w-20 h-20 rounded-full bg-white/10 blur-xs pointer-events-none" />
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-100">Active Event</span>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                activeEvent.feasibility_status === 'feasible'
-                  ? 'bg-emerald-400 text-emerald-950'
-                  : activeEvent.feasibility_status === 'infeasible'
-                  ? 'bg-rose-400 text-rose-950'
-                  : 'bg-amber-300 text-amber-950'
-              }`}>
-                {activeEvent.feasibility_status}
-              </span>
-            </div>
-            <p className="text-[14px] font-bold truncate leading-tight">{activeEvent.name}</p>
-            <p className="text-[11px] text-blue-100/90 mt-1">{activeEvent.event_date}</p>
-            <div className="mt-3 pt-2.5 border-t border-white/15 flex items-center justify-between text-[11px] text-blue-100">
-              <span>{activeEvent.days_remaining} days left</span>
-              <span className="font-semibold">{activeEvent.completed_tasks}/{activeEvent.task_count} tasks</span>
-            </div>
+      {/* Bottom CTA Card: Plan Smarter with AI (matching reference image) */}
+      <div className="p-4">
+        <div className="bg-white/95 rounded-2xl p-4 border border-[#E2E6DC] shadow-xs space-y-3">
+          <div className="w-10 h-10 rounded-xl bg-[#E8F5F1] text-[#164B3D] flex items-center justify-center">
+            <Sparkles size={18} strokeWidth={2.2} />
           </div>
+          <div>
+            <h4 className="text-sm font-bold text-[#17252B] leading-snug">
+              Plan smarter with AI
+            </h4>
+            <p className="text-xs text-[#66717A] mt-1 leading-relaxed">
+              Get intelligent suggestions and real-time replanning.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/ai-workspace')}
+            className="w-full bg-[#164B3D] hover:bg-[#0F382E] text-white py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-98"
+          >
+            <span>Open AI Workspace</span>
+            <ArrowRight size={13} />
+          </button>
         </div>
-      )}
+      </div>
 
-      {/* New Event Action */}
-      <div className="p-3 border-t border-gray-100">
+      {/* Settings / Footer item */}
+      <div className="p-4 pt-1 border-t border-[#E2E6DC]/80">
         <button
           type="button"
-          onClick={() => navigate('/events?create=true')}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-dashed border-gray-300 text-[13px] font-semibold text-gray-700 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50/50 transition-all cursor-pointer"
+          onClick={() => navigate('/events')}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-[#66717A] hover:text-[#17252B] hover:bg-white/50 transition-colors cursor-pointer"
         >
-          <Plus size={16} />
-          Create Event
+          <Settings size={18} className="text-[#66717A]" />
+          <span>Settings</span>
         </button>
       </div>
     </aside>

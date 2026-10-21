@@ -86,8 +86,8 @@ export default function AIWorkspace() {
   if (!activeEvent) {
     return (
       <div className="p-8 max-w-5xl mx-auto text-center py-16">
-        <Sparkles size={36} className="mx-auto text-blue-500 mb-2" />
-        <h3 className="text-lg font-bold text-[#1a2b4a]">No event selected</h3>
+        <Sparkles size={36} className="mx-auto text-[#52B9A3] mb-2" />
+        <h3 className="text-lg font-bold text-[#17252B]">No event selected</h3>
         <p className="text-xs text-gray-500 mt-1">Please select an event to use the AI Workspace.</p>
       </div>
     );
@@ -106,8 +106,8 @@ export default function AIWorkspace() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-black text-[#1a2b4a] tracking-tight">AI Workspace</h1>
-            <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100 flex items-center gap-1">
+            <h1 className="text-2xl font-black text-[#17252B] tracking-tight">AI Workspace</h1>
+            <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#E5EFE8] text-[#164B3D] border border-[#CCE4DA] flex items-center gap-1">
               <Sparkles size={11} /> PlanForge Hybrid
             </span>
           </div>
@@ -122,7 +122,7 @@ export default function AIWorkspace() {
             onClick={() => setActiveTab('replan')}
             className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
               activeTab === 'replan'
-                ? 'bg-blue-600 text-white shadow-xs'
+                ? 'bg-[#164B3D] text-white shadow-xs'
                 : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
             }`}
           >
@@ -133,7 +133,7 @@ export default function AIWorkspace() {
             onClick={() => setActiveTab('history')}
             className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
               activeTab === 'history'
-                ? 'bg-blue-600 text-white shadow-xs'
+                ? 'bg-[#164B3D] text-white shadow-xs'
                 : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
             }`}
           >
@@ -160,10 +160,10 @@ export default function AIWorkspace() {
       {activeTab === 'replan' && (
         <div className="space-y-6">
           {/* Prompt Input Box */}
-          <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-xs space-y-4">
+          <div className="bg-white rounded-3xl border border-[#E3E8E2] p-6 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-bold text-[#1a2b4a]">Natural-Language Replan Instruction</h3>
+                <h3 className="text-sm font-bold text-[#17252B]">Natural-Language Replan Instruction</h3>
                 <p className="text-xs text-gray-500">
                   State your desired revisions in natural English. PlanForge validates constraints and previews changes before anything is saved.
                 </p>
@@ -179,13 +179,13 @@ export default function AIWorkspace() {
                 placeholder="e.g. Reduce my budget from ₹250,000 to ₹180,000 and move the event two days earlier..."
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                className="w-full p-4 rounded-2xl border border-gray-200 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 placeholder-gray-400"
+                className="w-full p-4 rounded-2xl border border-gray-200 text-xs focus:outline-none focus:border-[#52B9A3] focus:ring-1 focus:ring-[#52B9A3]/30 placeholder-gray-400"
               />
               <button
                 type="button"
                 onClick={() => handleGeneratePreview()}
                 disabled={loading || !prompt.trim()}
-                className="absolute right-3 bottom-3 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                className="absolute right-3 bottom-3 px-4 py-2 bg-[#164B3D] hover:bg-[#103D32] disabled:opacity-40 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
               >
                 {loading ? (
                   <>
@@ -215,7 +215,7 @@ export default function AIWorkspace() {
                       setPrompt(ex);
                       handleGeneratePreview(ex);
                     }}
-                    className="text-left text-[11px] font-medium bg-gray-50 hover:bg-blue-50/70 hover:text-blue-700 border border-gray-100 rounded-xl px-3 py-1.5 text-gray-600 transition-colors cursor-pointer"
+                    className="text-left text-[11px] font-medium bg-gray-50 hover:bg-[#E5EFE8] hover:text-[#164B3D] border border-gray-100 rounded-xl px-3 py-1.5 text-gray-600 transition-colors cursor-pointer"
                   >
                     "{ex}"
                   </button>
@@ -226,7 +226,7 @@ export default function AIWorkspace() {
 
           {/* Replan Preview Area (Before / After Comparison) */}
           {preview && (
-            <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm space-y-6 animate-fadeIn">
+            <div className="bg-white rounded-3xl border border-[#E3E8E2] p-6 shadow-sm space-y-6 animate-fadeIn">
               {/* Feasibility Banner */}
               <div className={`p-4 rounded-2xl border flex items-center justify-between gap-4 ${
                 preview.is_feasible
@@ -266,7 +266,7 @@ export default function AIWorkspace() {
                     onClick={handleAcceptReplan}
                     disabled={loading}
                     className={`px-4 py-2 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer ${
-                      preview.is_feasible ? 'bg-blue-600 hover:bg-blue-700' : 'bg-amber-600 hover:bg-amber-700'
+                      preview.is_feasible ? 'bg-[#164B3D] hover:bg-[#103D32]' : 'bg-amber-600 hover:bg-amber-700'
                     }`}
                   >
                     <Check size={14} />
@@ -291,8 +291,8 @@ export default function AIWorkspace() {
                           <span className="text-gray-400 line-through">
                             {typeof c.original === 'number' ? formatINR(c.original) : c.original}
                           </span>
-                          <ArrowRight size={12} className="text-blue-500" />
-                          <span className="text-blue-600">
+                          <ArrowRight size={12} className="text-[#52B9A3]" />
+                          <span className="text-[#164B3D]">
                             {typeof c.revised === 'number' ? formatINR(c.revised) : c.revised}
                           </span>
                         </div>
@@ -318,11 +318,11 @@ export default function AIWorkspace() {
                   <div className="space-y-2 text-xs">
                     <div className="flex justify-between py-1 border-b border-gray-100">
                       <span className="text-gray-500 font-medium">Event Date:</span>
-                      <span className="font-bold text-[#1a2b4a]">{preview.original_plan.event_date}</span>
+                      <span className="font-bold text-[#17252B]">{preview.original_plan.event_date}</span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-gray-100">
                       <span className="text-gray-500 font-medium">Expected Guests:</span>
-                      <span className="font-bold text-[#1a2b4a]">{preview.original_plan.guest_count}</span>
+                      <span className="font-bold text-[#17252B]">{preview.original_plan.guest_count}</span>
                     </div>
                   </div>
 
@@ -342,36 +342,36 @@ export default function AIWorkspace() {
                 </div>
 
                 {/* Revised Plan */}
-                <div className="bg-blue-50/40 border border-blue-200 rounded-2xl p-5 space-y-4">
-                  <div className="flex items-center justify-between pb-2 border-b border-blue-200">
-                    <span className="text-xs font-bold uppercase tracking-wider text-blue-700">
+                <div className="bg-[#F3F7F2] border border-[#CCE4DA] rounded-2xl p-5 space-y-4">
+                  <div className="flex items-center justify-between pb-2 border-b border-[#DCE9E1]">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#164B3D]">
                       Proposed Revised Plan
                     </span>
-                    <span className="text-xs font-bold text-blue-700">
+                    <span className="text-xs font-bold text-[#164B3D]">
                       {formatINR(preview.revised_plan.total_budget)}
                     </span>
                   </div>
 
                   <div className="space-y-2 text-xs">
-                    <div className="flex justify-between py-1 border-b border-blue-100">
+                    <div className="flex justify-between py-1 border-b border-[#E3E8E2]">
                       <span className="text-gray-500 font-medium">Event Date:</span>
-                      <span className="font-bold text-blue-900">{preview.revised_plan.event_date}</span>
+                      <span className="font-bold text-[#17252B]">{preview.revised_plan.event_date}</span>
                     </div>
-                    <div className="flex justify-between py-1 border-b border-blue-100">
+                    <div className="flex justify-between py-1 border-b border-[#E3E8E2]">
                       <span className="text-gray-500 font-medium">Expected Guests:</span>
-                      <span className="font-bold text-blue-900">{preview.revised_plan.guest_count}</span>
+                      <span className="font-bold text-[#17252B]">{preview.revised_plan.guest_count}</span>
                     </div>
                   </div>
 
                   <div className="pt-2">
-                    <span className="text-[11px] font-bold uppercase text-blue-600 tracking-wider block mb-2">
+                    <span className="text-[11px] font-bold uppercase text-[#164B3D] tracking-wider block mb-2">
                       Proportionally Scaled Allocations:
                     </span>
                     <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                       {preview.revised_plan.categories?.map((cat: any) => (
-                        <div key={cat.id} className="flex justify-between text-xs py-1 px-2 bg-white rounded-lg border border-blue-100">
+                        <div key={cat.id} className="flex justify-between text-xs py-1 px-2 bg-white rounded-lg border border-[#E3E8E2]">
                           <span className="text-gray-700 truncate">{cat.name}</span>
-                          <span className="font-bold text-blue-700">{formatINR(cat.revised_amount)}</span>
+                          <span className="font-bold text-[#164B3D]">{formatINR(cat.revised_amount)}</span>
                         </div>
                       ))}
                     </div>
@@ -396,7 +396,7 @@ export default function AIWorkspace() {
                     type="button"
                     onClick={handleAcceptReplan}
                     disabled={loading}
-                    className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-xs cursor-pointer"
+                    className="px-5 py-2 bg-[#164B3D] hover:bg-[#103D32] text-white rounded-xl font-bold shadow-xs cursor-pointer"
                   >
                     Accept Revision
                   </button>
@@ -412,7 +412,7 @@ export default function AIWorkspace() {
         <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-gray-100">
             <div>
-              <h3 className="text-sm font-bold text-[#1a2b4a]">Plan Version History</h3>
+              <h3 className="text-sm font-bold text-[#17252B]">Plan Version History</h3>
               <p className="text-xs text-gray-500">Every accepted plan modification is immutably archived with audit snapshots</p>
             </div>
             <span className="text-xs font-bold text-gray-400">{history.length} Saved Versions</span>
@@ -423,17 +423,17 @@ export default function AIWorkspace() {
               <div key={ver.id} className="py-4 flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3">
                   <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs ${
-                    ver.is_active ? 'bg-blue-600 text-white shadow-xs' : 'bg-gray-100 text-gray-600'
+                    ver.is_active ? 'bg-[#164B3D] text-white shadow-xs' : 'bg-gray-100 text-gray-600'
                   }`}>
                     v{ver.version_number}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-[#1a2b4a]">
+                      <span className="text-sm font-bold text-[#17252B]">
                         Plan Version {ver.version_number}
                       </span>
                       {ver.is_active && (
-                        <span className="text-[10px] bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded-full uppercase">
+                        <span className="text-[10px] bg-[#E5EFE8] text-[#164B3D] font-bold px-2 py-0.5 rounded-full uppercase">
                           Current Active
                         </span>
                       )}

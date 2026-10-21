@@ -8,7 +8,7 @@ import { useApp } from '../context/AppContext';
 import api from '../api/client';
 import { formatINR } from '../utils/format';
 
-const COLORS = ['#2563eb', '#38bdf8', '#818cf8', '#c084fc', '#f472b6', '#fb923c', '#4ade80', '#94a3b8'];
+const COLORS = ['#164B3D', '#52B9A3', '#88C0B3', '#B8C9BE', '#D9822B', '#9A7762', '#6F8F72', '#66717A'];
 
 export default function Budget() {
   const { activeEvent, activeEventId, refreshActiveEvent } = useApp();
@@ -134,7 +134,7 @@ export default function Budget() {
     return (
       <div className="p-8 max-w-5xl mx-auto text-center py-16">
         <Wallet size={36} className="mx-auto text-gray-400 mb-2" />
-        <h3 className="text-lg font-bold text-[#1a2b4a]">No event selected</h3>
+        <h3 className="text-lg font-bold text-[#17252B]">No event selected</h3>
         <p className="text-xs text-gray-500 mt-1">Please select an event from the top navigation to view its budget.</p>
       </div>
     );
@@ -158,7 +158,7 @@ export default function Budget() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-[#1a2b4a] tracking-tight">Budget Management</h1>
+          <h1 className="text-2xl font-black text-[#17252B] tracking-tight">Budget Management</h1>
           <p className="text-xs font-semibold text-gray-500 mt-0.5">
             PlanForge deterministic allocation for {activeEvent.name}
           </p>
@@ -176,7 +176,7 @@ export default function Budget() {
           <button
             type="button"
             onClick={() => setShowExpModal(true)}
-            className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-[#164B3D] hover:bg-[#103D32] text-white text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
           >
             <Plus size={14} />
             <span>Add Expense</span>
@@ -200,21 +200,21 @@ export default function Budget() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         <div className="bg-white rounded-2xl border border-gray-100 p-4.5 shadow-xs">
           <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Total Budget</span>
-          <p className="text-xl font-black text-[#1a2b4a] mt-1">{formatINR(totalBudget)}</p>
+          <p className="text-xl font-black text-[#17252B] mt-1">{formatINR(totalBudget)}</p>
           <p className="text-[10px] font-medium text-gray-500 mt-1.5">Authorized ceiling cap</p>
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-100 p-4.5 shadow-xs">
           <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Allocated Budget</span>
-          <p className="text-xl font-black text-blue-600 mt-1">{formatINR(allocatedBudget)}</p>
-          <p className="text-[10px] font-medium text-blue-600/80 mt-1.5">
+          <p className="text-xl font-black text-[#164B3D] mt-1">{formatINR(allocatedBudget)}</p>
+          <p className="text-[10px] font-medium text-[#164B3D]/80 mt-1.5">
             {Math.round((allocatedBudget / (totalBudget || 1)) * 100)}% of ceiling cap
           </p>
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-100 p-4.5 shadow-xs">
           <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Unallocated Budget</span>
-          <p className={`text-xl font-black mt-1 ${unallocatedBudget < 0 ? 'text-rose-600' : 'text-indigo-600'}`}> 
+          <p className={`text-xl font-black mt-1 ${unallocatedBudget < 0 ? 'text-rose-600' : 'text-[#52B9A3]'}`}>
             {formatINR(unallocatedBudget)}
           </p>
           <p className="text-[10px] font-medium text-gray-500 mt-1.5">Available to assign</p>
@@ -230,7 +230,7 @@ export default function Budget() {
 
         <div className="bg-white rounded-2xl border border-gray-100 p-4.5 shadow-xs">
           <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Available After Commitments</span>
-          <p className={`text-xl font-black mt-1 ${unspentBudget >= 0 ? 'text-[#1a2b4a]' : 'text-rose-600'}`}>
+          <p className={`text-xl font-black mt-1 ${unspentBudget >= 0 ? 'text-[#164B3D]' : 'text-rose-600'}`}>
             {formatINR(unspentBudget)}
           </p>
           <p className="text-[10px] font-medium text-gray-500 mt-1.5">
@@ -248,14 +248,14 @@ export default function Budget() {
         {/* Cash Remaining */}
 <div className="bg-white rounded-2xl border border-gray-100 p-4.5 shadow-xs">
   <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Cash Remaining</span>
-  <p className={`text-xl font-black mt-1 ${totalBudget - actualExpenses >= 0 ? 'text-[#1a2b4a]' : 'text-rose-600'}`}>{formatINR(totalBudget - actualExpenses)}</p>
+  <p className={`text-xl font-black mt-1 ${totalBudget - actualExpenses >= 0 ? 'text-[#17252B]' : 'text-rose-600'}`}>{formatINR(totalBudget - actualExpenses)}</p>
   <p className="text-[10px] font-medium text-gray-500 mt-1.5">Cash balance after actual spending</p>
 </div>
 
 {/* Total Spent + Committed */}
         <div className="bg-white rounded-2xl border border-gray-100 p-4.5 shadow-xs">
           <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Total Spent + Committed</span>
-          <p className="text-xl font-black text-[#1a2b4a] mt-1">{formatINR(budgetData?.total_exposure ?? 0)}</p>
+          <p className="text-xl font-black text-[#17252B] mt-1">{formatINR(budgetData?.total_exposure ?? 0)}</p>
           <p className="text-[10px] font-medium text-gray-500 mt-1.5">Actual + vendor commitments</p>
         </div>
       </div>
@@ -265,7 +265,7 @@ export default function Budget() {
         {/* Left 7 cols: Categories table */}
         <div className="lg:col-span-7 bg-white rounded-3xl border border-gray-100 p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-            <h3 className="text-sm font-bold text-[#1a2b4a]">Allocated Categories</h3>
+            <h3 className="text-sm font-bold text-[#17252B]">Allocated Categories</h3>
             <span className="text-xs text-gray-400 font-semibold">{categories.length} Categories</span>
           </div>
 
@@ -277,29 +277,29 @@ export default function Budget() {
                 <div key={cat.id} className="py-3.5 flex items-center justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-[13px] font-bold text-[#1a2b4a] truncate">{cat.name}</span>
+                      <span className="text-[13px] font-bold text-[#17252B] truncate">{cat.name}</span>
                       {cat.is_mandatory && (
                         <span className="text-[10px] bg-rose-50 text-rose-700 font-bold px-1.5 py-0.5 rounded-full uppercase">
                           Mandatory
                         </span>
                       )}
                       {cat.is_fixed && (
-                        <span className="text-[10px] bg-blue-50 text-blue-700 font-bold px-1.5 py-0.5 rounded-full uppercase">
+                        <span className="text-[10px] bg-[#E5EFE8] text-[#164B3D] font-bold px-1.5 py-0.5 rounded-full uppercase">
                           Fixed
                         </span>
                       )}
                     </div>
 
                     {/* Progress Bar */}
-                    <div className="w-full bg-gray-100 h-1.5 rounded-full mt-2 overflow-hidden">
-                      <div className="bg-blue-600 h-full rounded-full" style={{ width: `${Math.min(pct, 100)}%` }} />
+                    <div className="w-full bg-[#E5EFE8] h-1.5 rounded-full mt-2 overflow-hidden">
+                      <div className="bg-[#164B3D] h-full rounded-full" style={{ width: `${Math.min(pct, 100)}%` }} />
                     </div>
 
                   </div>
 
 
                   <div className="text-right shrink-0">
-                    <span className="text-sm font-bold text-[#1a2b4a] block">{formatINR(cat.allocated_amount)}</span>
+                    <span className="text-sm font-bold text-[#17252B] block">{formatINR(cat.allocated_amount)}</span>
                     <span className="text-[11px] text-gray-400 font-medium">{pct}% of budget</span>
                   </div>
 
@@ -323,7 +323,7 @@ export default function Budget() {
         {/* Right 5 cols: Category Recharts Pie */}
         <div className="lg:col-span-5 bg-white rounded-3xl border border-gray-100 p-6 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-            <h3 className="text-sm font-bold text-[#1a2b4a]">Budget Distribution</h3>
+            <h3 className="text-sm font-bold text-[#17252B]">Budget Distribution</h3>
             <PieIcon size={16} className="text-gray-400" />
           </div>
 
@@ -370,14 +370,14 @@ export default function Budget() {
       <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-xs space-y-4">
         <div className="flex items-center justify-between pb-2 border-b border-gray-100">
           <div>
-            <h3 className="text-sm font-bold text-[#1a2b4a]">Expense Tracker</h3>
+            <h3 className="text-sm font-bold text-[#17252B]">Expense Tracker</h3>
             <p className="text-xs text-gray-500">Record line-item vendor bills and paid disbursements</p>
           </div>
 
           <button
             type="button"
             onClick={() => setShowExpModal(true)}
-            className="text-xs font-bold text-blue-600 hover:text-blue-700 cursor-pointer"
+            className="text-xs font-bold text-[#164B3D] hover:text-[#103D32] cursor-pointer"
           >
             + Add Expense
           </button>
@@ -404,10 +404,10 @@ export default function Budget() {
               <tbody className="divide-y divide-gray-50">
                 {expenses.map((exp) => (
                   <tr key={exp.id} className="hover:bg-gray-50/70 transition-colors">
-                    <td className="py-3 font-bold text-[#1a2b4a]">{exp.name}</td>
+                    <td className="py-3 font-bold text-[#17252B]">{exp.name}</td>
                     <td className="py-3 text-gray-500 font-medium">{exp.vendor_name || '—'}</td>
                     <td className="py-3 font-medium text-gray-600">{formatINR(exp.estimated_cost)}</td>
-                    <td className="py-3 font-bold text-[#1a2b4a]">{exp.actual_cost ? formatINR(exp.actual_cost) : '—'}</td>
+                    <td className="py-3 font-bold text-[#17252B]">{exp.actual_cost ? formatINR(exp.actual_cost) : '—'}</td>
                     <td className="py-3">
                       <button
                         type="button"
@@ -442,7 +442,7 @@ export default function Budget() {
       {showCatModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100">
-            <h3 className="text-base font-bold text-[#1a2b4a] mb-4">Add Budget Category</h3>
+            <h3 className="text-base font-bold text-[#17252B] mb-4">Add Budget Category</h3>
             <form onSubmit={handleAddCategory} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Category Name *</label>
@@ -452,7 +452,7 @@ export default function Budget() {
                   placeholder="e.g. Photography & Video"
                   value={catName}
                   onChange={(e) => setCatName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-[#52B9A3] focus:ring-1 focus:ring-[#52B9A3]/30"
                 />
               </div>
 
@@ -465,7 +465,7 @@ export default function Budget() {
                   required
                   value={catAmount}
                   onChange={(e) => setCatAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-[#52B9A3] focus:ring-1 focus:ring-[#52B9A3]/30"
                 />
               </div>
 
@@ -476,7 +476,7 @@ export default function Budget() {
                     type="checkbox"
                     checked={catMandatory}
                     onChange={(e) => setCatMandatory(e.target.checked)}
-                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                    className="w-4 h-4 rounded accent-[#164B3D] focus:ring-[#52B9A3]"
                   />
                   <span>Mandatory Expense (Cannot be eliminated during replanning)</span>
                 </label>
@@ -485,7 +485,7 @@ export default function Budget() {
                     type="checkbox"
                     checked={catFixed}
                     onChange={(e) => setCatFixed(e.target.checked)}
-                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                    className="w-4 h-4 rounded accent-[#164B3D] focus:ring-[#52B9A3]"
                   />
                   <span>Fixed Price (Cannot be silently reduced by optimization)</span>
                 </label>
@@ -502,7 +502,7 @@ export default function Budget() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700"
+                  className="px-4 py-2 rounded-xl bg-[#164B3D] text-white text-xs font-bold hover:bg-[#103D32]"
                 >
                   Save Category
                 </button>
@@ -518,7 +518,7 @@ export default function Budget() {
       {showExpModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100">
-            <h3 className="text-base font-bold text-[#1a2b4a] mb-4">Add Expense Item</h3>
+            <h3 className="text-base font-bold text-[#17252B] mb-4">Add Expense Item</h3>
             <form onSubmit={handleAddExpense} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Expense Name *</label>
@@ -528,7 +528,7 @@ export default function Budget() {
                   placeholder="e.g. Stage lighting & PA deposit"
                   value={expName}
                   onChange={(e) => setExpName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-[#52B9A3] focus:ring-1 focus:ring-[#52B9A3]/30"
                 />
               </div>
 
@@ -542,7 +542,7 @@ export default function Budget() {
                     required
                     value={expEst}
                     onChange={(e) => setExpEst(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-blue-500"
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-[#52B9A3] focus:ring-1 focus:ring-[#52B9A3]/30"
                   />
                 </div>
 
@@ -553,7 +553,7 @@ export default function Budget() {
                     min="0"
                     value={expAct}
                     onChange={(e) => setExpAct(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-blue-500"
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-[#52B9A3] focus:ring-1 focus:ring-[#52B9A3]/30"
                   />
                 </div>
 
@@ -565,7 +565,7 @@ export default function Budget() {
                 <select
                   value={expCatId}
                   onChange={(e) => setExpCatId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-blue-500 bg-white"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-[#52B9A3] focus:ring-1 focus:ring-[#52B9A3]/30 bg-white"
                 >
                   <option value="">No category</option>
                   {categories.map((c: any) => (
@@ -582,7 +582,7 @@ export default function Budget() {
                   placeholder="e.g. Skyline AV Systems"
                   value={expVendor}
                   onChange={(e) => setExpVendor(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-[#52B9A3] focus:ring-1 focus:ring-[#52B9A3]/30"
                 />
               </div>
 
@@ -593,7 +593,7 @@ export default function Budget() {
                     type="checkbox"
                     checked={expPaid}
                     onChange={(e) => setExpPaid(e.target.checked)}
-                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                    className="w-4 h-4 rounded accent-[#164B3D] focus:ring-[#52B9A3]"
                   />
                   <span>Mark as Paid</span>
                 </label>
@@ -610,7 +610,7 @@ export default function Budget() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700"
+                  className="px-4 py-2 rounded-xl bg-[#164B3D] text-white text-xs font-bold hover:bg-[#103D32]"
                 >
                   Save Expense
                 </button>

@@ -37,7 +37,7 @@ export default function MyEvents() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-[#1a2b4a] tracking-tight">My Events</h1>
+          <h1 className="text-2xl font-black text-[#17252B] tracking-tight">My Events</h1>
           <p className="text-xs font-semibold text-gray-500 mt-0.5">
             Manage your celebrations, weddings, and community gatherings. Select any event to open its workspace.
           </p>
@@ -46,7 +46,7 @@ export default function MyEvents() {
         <button
           type="button"
           onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors shadow-xs cursor-pointer"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#164B3D] text-white rounded-xl text-sm font-bold hover:bg-[#103D32] transition-colors shadow-xs cursor-pointer"
         >
           <Plus size={16} />
           Create Event
@@ -57,14 +57,14 @@ export default function MyEvents() {
       {events.length === 0 ? (
         <div className="bg-white rounded-3xl border border-gray-100 p-12 text-center shadow-xs">
           <Calendar size={32} className="mx-auto text-gray-400 mb-3" />
-          <h3 className="text-lg font-bold text-[#1a2b4a]">No events created yet</h3>
+          <h3 className="text-lg font-bold text-[#17252B]">No events created yet</h3>
           <p className="text-xs text-gray-500 max-w-md mx-auto mt-1 mb-5">
             Choose between Manual Planner and AI Planner to organize your next celebration.
           </p>
           <button
             type="button"
             onClick={() => setIsModalOpen(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-colors cursor-pointer"
+            className="px-4 py-2 bg-[#164B3D] text-white rounded-xl text-xs font-bold hover:bg-[#103D32] transition-colors cursor-pointer"
           >
             + Create Event
           </button>
@@ -81,17 +81,17 @@ export default function MyEvents() {
                 key={event.id}
                 onClick={() => handleSelectEvent(event.id)}
                 className={`bg-white rounded-3xl border p-6 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between relative group ${
-                  isActive ? 'border-blue-600 ring-2 ring-blue-600/10' : 'border-gray-100'
+                  isActive ? 'border-[#164B3D] ring-2 ring-[#52B9A3]/20' : 'border-[#E3E8E2]'
                 }`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#E5EFE8] text-[#164B3D]">
                         {event.event_type}
                       </span>
                       <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full flex items-center gap-1 ${
-                        isManual ? 'bg-gray-100 text-gray-700' : 'bg-indigo-50 text-indigo-700'
+                        isManual ? 'bg-gray-100 text-gray-700' : 'bg-[#E5EFE8] text-[#164B3D]'
                       }`}>
                         {isManual ? <Sliders size={10} /> : <Sparkles size={10} />}
                         {isManual ? 'Manual' : 'AI'}
@@ -117,7 +117,7 @@ export default function MyEvents() {
                     </div>
                   </div>
 
-                  <h3 className="text-lg font-bold text-[#1a2b4a] group-hover:text-blue-600 transition-colors">
+                  <h3 className="text-lg font-bold text-[#17252B] group-hover:text-[#164B3D] transition-colors">
                     {event.name}
                   </h3>
 
@@ -140,7 +140,7 @@ export default function MyEvents() {
                 <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between">
                   <div>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block">Total Budget</span>
-                    <span className="text-base font-black text-[#1a2b4a]">{formatINR(event.total_budget)}</span>
+                    <span className="text-base font-black text-[#17252B]">{formatINR(event.total_budget)}</span>
                   </div>
 
                   <button
@@ -151,8 +151,8 @@ export default function MyEvents() {
                     }}
                     className={`inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
                       isActive
-                        ? 'bg-blue-600 text-white shadow-xs'
-                        : 'bg-gray-50 text-gray-600 group-hover:bg-blue-50 group-hover:text-blue-600'
+                        ? 'bg-[#164B3D] text-white shadow-xs'
+                        : 'bg-gray-50 text-gray-600 group-hover:bg-[#E5EFE8] group-hover:text-[#164B3D]'
                     }`}
                   >
                     <span>{isActive ? 'Active' : 'Open'}</span>
