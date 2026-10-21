@@ -200,8 +200,12 @@ export default function LandingPage() {
                 <p>Turn</p>
                 <p>Ideas</p>
                 <p>into</p>
-                <p className="text-[#164B3D] font-bold">Unforgettable</p>
-                <p>Experiences</p>
+                <p className="text-[#164B3D] font-bold translate-x-6 sm:translate-x-10 lg:translate-x-14 translate-y-1 sm:translate-y-1.5">
+                  Unforgettable
+                </p>
+                <p className="translate-x-9 sm:translate-x-16 lg:translate-x-20 translate-y-1 sm:translate-y-1.5">
+                  Experiences
+                </p>
               </div>
 
               {/* Organic Botanical Leaf SVGs */}
