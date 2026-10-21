@@ -9,8 +9,10 @@
     <img src="https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white" alt="React 19">
     <img src="https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white" alt="TypeScript">
     <img src="https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white" alt="FastAPI">
+    <img src="https://img.shields.io/badge/Auth-JWT%20%26%20Bcrypt-009688" alt="Auth with JWT and Bcrypt">
     <img src="https://img.shields.io/badge/PlanForge-OR--Tools-164B3D" alt="PlanForge with OR-Tools">
     <img src="https://img.shields.io/badge/AI-Groq-F55036?logo=groq&logoColor=white" alt="Groq">
+    <img src="https://img.shields.io/badge/Database-PostgreSQL%20%2F%20SQLite-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL and SQLite">
   </p>
 </div>
 
@@ -59,6 +61,8 @@ Planning an event means coordinating dates, people, tasks, costs, and vendors—
 
 ## What is implemented
 
+- **User authentication & session management** — self-service user signup, login, and logout powered by FastAPI, PyJWT, and secure bcrypt password hashing. Supports HttpOnly/SameSite cookies with an in-memory Bearer token fallback.
+- **Multi-user event isolation** — strict backend ownership checks ensure each authenticated organizer only accesses and modifies their own events, tasks, budgets, expenses, vendors, and replan proposals. Unauthenticated requests return `401 Unauthorized`; foreign or unowned resources return `404 Not Found` to prevent ID enumeration.
 - **Event creation and management** — create, view, update, and delete events; capture event details and generate a proposed baseline plan. Groq-powered generation is optional; a deterministic template fallback is available without it.
 - **Dashboard and My Events** — review event information and navigate between events and planning areas.
 - **Task management** — create and update tasks, including status, duration, deadlines, priorities, milestones, assignees, and dependencies.
@@ -68,6 +72,31 @@ Planning an event means coordinating dates, people, tasks, costs, and vendors—
 - **AI-assisted replanning** — request proposed budget, date, or guest-count changes in natural language; review a preview and feasibility details; then accept or reject.
 - **Plan history** — accepted revisions are saved as plan versions with feasibility details and a change summary.
 - **Constraint-aware acceptance** — infeasible previews are blocked, and the backend acceptance endpoint independently rechecks existing financial exposure before applying a revision.
+
+## Authentication and user isolation
+
+Aventra implements end-to-end user authentication and complete multi-user data isolation:
+
+### Architecture & Security Flow
+
+- **Registration (`POST /api/v1/auth/register`)**: Validates email and name schemas, enforces unique accounts, and hashes passwords with `bcrypt` (salted, resistant to rainbow tables and brute-force attacks) before persisting to the database.
+- **Authentication (`POST /api/v1/auth/login`)**: Validates credentials using constant-time hash comparisons and issues an industry-standard signed JSON Web Token (JWT) using `PyJWT` with HS256 encryption. The token is transmitted in the response payload and set as a hardened `HttpOnly`, `SameSite`, and `Secure` cookie.
+- **Session Verification & Logout (`GET /api/v1/auth/me`, `POST /api/v1/auth/logout`)**: Validates active tokens, exposes the authenticated organizer's profile, and flushes session cookies upon sign-out.
+- **Dual Credential Resolution**: The backend inspects both incoming `access_token` cookies and `Authorization: Bearer <token>` headers, ensuring reliable operation across modern browsers, mobile viewports, and strict privacy modes.
+
+### Ownership Enforcement & Data Isolation
+
+- **Route Guarding**: All event-management endpoints require an authenticated user via FastAPI's `current_user: User = Depends(get_current_user)` dependency.
+- **Sub-resource Protection**: Every endpoint touching tasks, budget categories, line-item expenses, vendors, timeline dependencies, or replan proposals executes `get_user_event_or_404(db, event_id, current_user.id)` before any database read or mutation.
+- **Anti-Enumeration Protection**: Unauthorized access attempts to resources owned by other users return `404 Not Found` rather than `403 Forbidden`, preventing malicious actors from probing valid event or task IDs.
+- **Legacy Record Safety**: Pre-existing production records with `user_id IS NULL` remain preserved in the database but are completely inaccessible through public or authenticated API endpoints.
+- **Client Route Protection**: The landing page remains publicly accessible. Workspace routes (`/events`, `/dashboard`, `/budget`, `/timeline`, `/tasks`, `/vendors`, `/ai-workspace`, `/settings`) are wrapped in `ProtectedRoute`, automatically prompting unauthenticated visitors to sign in or create an account via the modal dialog.
+
+### Neon PostgreSQL Schema & Alembic Migrations
+
+- **`users` Table**: Contains `id` (UUID Primary Key), `email` (unique index), `name`, `hashed_password`, and timestamp columns (`created_at`, `updated_at`).
+- **`events.user_id` Foreign Key**: Binds each event to its owner (`FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE`) with an indexed column for query performance.
+- **Repeatable Migrations**: Managed via **Alembic** (`backend/alembic/versions/001_add_users_and_event_user_id.py`). Supports Neon PostgreSQL transactional DDL in production as well as SQLite batch operations for local development and test runs.
 
 ## PlanForge: deterministic checks around proposed plans
 
@@ -103,19 +132,21 @@ flowchart LR
 
 ## How it works
 
-1. **Create an event** and enter its planning details.
-2. **Organize the plan** by managing tasks, dependencies, budget categories, expenses, vendors, and schedule.
-3. **Request a revision** in the AI Workspace, such as a budget or date change.
-4. **Review the preview** and the deterministic PlanForge feasibility result.
-5. **Accept or reject** the proposal. Infeasible revisions are blocked; accepted revisions are saved as a new plan version.
+1. **Sign up or log in** to create an organizer profile.
+2. **Create an event** and enter its planning details.
+3. **Organize the plan** by managing tasks, dependencies, budget categories, expenses, vendors, and schedule.
+4. **Request a revision** in the AI Workspace, such as a budget or date change.
+5. **Review the preview** and the deterministic PlanForge feasibility result.
+6. **Accept or reject** the proposal. Infeasible revisions are blocked; accepted revisions are saved as a new plan version.
 
 ## System architecture
 
 ```mermaid
 flowchart LR
     organizer["Organizer"] --> frontend["React, TypeScript, and Vite"]
-    frontend -->|"/api/v1 REST API"| backend["FastAPI"]
-    backend --> services["Application services"]
+    frontend -->|"/api/v1 REST API with JWT / Cookies"| backend["FastAPI"]
+    backend --> auth["Auth & Ownership Guard (PyJWT + bcrypt)"]
+    auth --> services["Application services"]
     services -->|Optional plan generation| groq["Groq or template fallback"]
     groq --> services
     services --> validator["PlanForge validator"]
@@ -124,11 +155,11 @@ flowchart LR
     budget --> validator
     schedule --> validator
     validator -->|Feasibility result| backend
-    services --> orm["SQLAlchemy"]
-    orm --> database["SQLite locally or PostgreSQL"]
+    services --> orm["SQLAlchemy + Alembic"]
+    orm --> database["SQLite locally or Neon PostgreSQL"]
 ```
 
-The frontend uses the `/api/v1` API. FastAPI routes delegate to application services and SQLAlchemy models. PlanForge performs deterministic validation in the backend; Groq is an optional proposal-generation service, not the source of feasibility decisions.
+The frontend interacts with the `/api/v1` API using session cookies and in-memory tokens. FastAPI routes authenticate requests and verify event ownership before delegating to application services and SQLAlchemy models. PlanForge performs deterministic validation in the backend; Groq is an optional proposal-generation service, not the source of feasibility decisions.
 
 ## Technology
 
@@ -136,17 +167,18 @@ The frontend uses the `/api/v1` API. FastAPI routes delegate to application serv
 | --- | --- |
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS v4, React Router, Recharts, Lucide |
 | Backend | Python, FastAPI, Pydantic, SQLAlchemy |
+| Authentication & Security | PyJWT (HS256 tokens), bcrypt password hashing, HttpOnly/SameSite session cookies, backend ownership verification |
 | Planning | PlanForge budget and scheduling validators, Google OR-Tools |
-| Database | SQLite for local development; PostgreSQL through psycopg when `DATABASE_URL` is configured |
+| Database & Migrations | Neon PostgreSQL (production) through psycopg, SQLite (local development), Alembic schema migrations |
 | AI | Groq API using the official Python SDK; deterministic template fallback |
-| Testing | Pytest, FastAPI TestClient |
+| Testing | Pytest, FastAPI TestClient (71 automated tests) |
 | Deployment configuration | Vercel frontend, Render web service, Neon PostgreSQL — prepared, not deployed |
 
 ## Getting started
 
 ### Prerequisites
 
-- Python 3.10 or newer
+- Python 3.10 or newer (Python 3.12 recommended for OR-Tools compatibility)
 - Node.js 20.19+ or 22.12+ and npm (Vite 8-compatible versions)
 
 ### 1. Clone the repository
@@ -181,15 +213,28 @@ python -m pip install -r requirements.txt
 cp ../.env.example .env
 ```
 
-Edit `backend/.env` only if needed. It contains placeholders, not credentials:
+Edit `backend/.env` to configure your environment variables:
 
 ```dotenv
 GROQ_API_KEY=your_groq_api_key_here
 DATABASE_URL=sqlite:///./aventra.db
 CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+
+# Authentication and security configuration
+JWT_SECRET_KEY=your_secure_random_jwt_secret_here
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
+COOKIE_SECURE=false
+COOKIE_SAMESITE=lax
 ```
 
-The backend defaults to SQLite, creating `backend/aventra.db` when run from the `backend` directory. If `GROQ_API_KEY` is not configured, planning uses the deterministic fallback templates. Never commit `.env` or real credentials.
+Apply database migrations:
+
+```bash
+alembic upgrade head
+```
+
+This applies the Alembic migration to create the `users` table and the `events.user_id` foreign key. The backend defaults to SQLite (`backend/aventra.db`) when run locally. If `GROQ_API_KEY` is not configured, planning uses the deterministic fallback templates. Never commit `.env` or real credentials.
 
 Start the API from `backend/`:
 
@@ -220,11 +265,11 @@ Run the backend automated tests from `backend/`:
 python -m pytest tests/ -q
 ```
 
-The current test files cover API behavior and replanning, PlanForge budget and scheduling constraints, and database URL/CORS deployment configuration:
-
-- `backend/tests/test_api.py`
-- `backend/tests/test_planforge.py`
-- `backend/tests/test_deployment_config.py`
+The test suite covers:
+- `backend/tests/test_auth.py` — user registration, login, logout, password hashing, unauthenticated 401s, cross-user 404s, and legacy NULL event hiding
+- `backend/tests/test_api.py` — authenticated event CRUD, tasks, budget allocations, line-item expenses, and vendor checklist
+- `backend/tests/test_planforge.py` — OR-Tools constraints, dependency topological sorting, and financial exposure rechecks
+- `backend/tests/test_deployment_config.py` — CORS origin normalization and database URL compatibility
 
 Run the frontend TypeScript check and production bundle from `frontend/`:
 
@@ -239,9 +284,15 @@ PlanForge validation and the backend's acceptance checks are safeguards; they do
 Deployment configuration is prepared for **Vercel** (frontend), **Render Free Web Service** (FastAPI), and **Neon Free PostgreSQL**. **Aventra is not currently documented as deployed; no live demo URL is available.**
 
 - `frontend/vercel.json` provides single-page-app route fallback. Configure Vercel with `frontend` as the project root and set `VITE_API_URL` to the Render service origin.
-- `render.yaml` defines the backend root, build/start commands, free plan, health check, and environment-variable placeholders.
-- Set `DATABASE_URL`, `GROQ_API_KEY`, and the allowed frontend origins in Render's environment settings. Do not put credentials in the repository.
-- PostgreSQL URLs are normalized to use psycopg. SQLite remains the local default; initialization creates missing tables and only applies the existing compatibility-column change to SQLite.
+- `render.yaml` defines the backend root, build/start commands, free plan, health check, and environment variables:
+  - `PYTHON_VERSION`: Explicitly set to `3.12.8` for OR-Tools compatibility.
+  - `DATABASE_URL`: Connection string for Neon PostgreSQL.
+  - `JWT_SECRET_KEY`: Cryptographic signing key generated automatically on Render (`generateValue: true`).
+  - `COOKIE_SECURE`: Configured to `"true"` for production HTTPS.
+  - `COOKIE_SAMESITE`: Configured to `"none"` to support cross-site session cookies between Vercel and Render.
+  - `CORS_ORIGINS`: Allowed frontend origins with credential support.
+- Apply database migrations to Neon PostgreSQL before or during deployment by running `alembic upgrade head` with your production `DATABASE_URL`.
+- PostgreSQL URLs are normalized to use psycopg.
 
 Deployment still requires creating/configuring the provider services and entering your own secret values. See [Render configuration](./render.yaml), [Vercel configuration](./frontend/vercel.json), and the environment templates [`.env.example`](./.env.example) and [`frontend/.env.example`](./frontend/.env.example).
 
@@ -250,24 +301,28 @@ Deployment still requires creating/configuring the provider services and enterin
 ```text
 aventra/
 ├── backend/
+│   ├── alembic/                 # Database migration scripts
+│   │   └── versions/            # 001_add_users_and_event_user_id.py
 │   ├── app/
-│   │   ├── api/                 # Events, budget, tasks, vendors, replanning
-│   │   ├── models/              # SQLAlchemy models
+│   │   ├── api/                 # Auth, events, budget, tasks, vendors, replanning
+│   │   ├── core/                # JWT utilities, bcrypt security, auth dependencies
+│   │   ├── models/              # User, Event, Task, Budget, Vendor, Plan
 │   │   ├── planforge/           # Budget, scheduling, unified validation
-│   │   ├── schemas/             # API schemas
+│   │   ├── schemas/             # User, Event, Task, Budget, Vendor schemas
 │   │   ├── services/            # Event, financial, and AI/replan services
 │   │   ├── config.py
 │   │   ├── database.py
 │   │   └── main.py
-│   ├── tests/
+│   ├── tests/                   # 71 tests (test_auth, test_api, test_planforge, etc.)
+│   ├── alembic.ini
 │   └── requirements.txt
 ├── docs/
 │   └── images/                  # Supplied, optimized application screenshots
 ├── frontend/
 │   ├── src/
-│   │   ├── api/
-│   │   ├── components/
-│   │   ├── context/
+│   │   ├── api/                 # API client with credentials & Bearer fallback
+│   │   ├── components/          # AuthModal, Topbar, layout components
+│   │   ├── context/             # AuthContext, AppContext
 │   │   └── pages/               # Landing, dashboard, events, tasks, budget,
 │   │                            # timeline, vendors, AI Workspace
 │   ├── .env.example
