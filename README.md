@@ -1,266 +1,291 @@
-# Aventra
+<div align="center">
+  <h1>Aventra</h1>
+  <p><strong>Powered by PlanForge</strong></p>
+  <p><em>Every event, intelligently orchestrated.</em></p>
+  <p>
+    An event-planning workspace for turning event details into organized tasks, budgets, vendor records, and schedules—with deterministic checks before a revised plan is applied.
+  </p>
+  <p>
+    <img src="https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white" alt="React 19">
+    <img src="https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white" alt="TypeScript">
+    <img src="https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white" alt="FastAPI">
+    <img src="https://img.shields.io/badge/PlanForge-OR--Tools-164B3D" alt="PlanForge with OR-Tools">
+    <img src="https://img.shields.io/badge/AI-Groq-F55036?logo=groq&logoColor=white" alt="Groq">
+  </p>
+</div>
 
-> **Every event, intelligently orchestrated.**  
-> Powered by the **PlanForge Constraint Engine**  
-> *PromptWars Virtual Challenge 5: Celebration & Event Planner*
+## Product preview
 
----
+The interface uses an understated cream, forest-green, and mint palette. These are screenshots of the application supplied for this project; they have been losslessly optimized for the repository.
 
-## 1. Overview
+<p align="center">
+  <img src="docs/images/landing.png" alt="Aventra landing page with the Events, made smarter hero" width="100%">
+</p>
+<p align="center"><em>Landing page · Aventra's event-planning workspace</em></p>
 
-**Aventra** is a production-minded celebration and event planning platform designed for weddings, birthdays, college fests, and community events. While modern LLMs excel at creative ideation and natural-language comprehension, they frequently produce mathematical hallucinations, ignore budget bounds, and fail at cyclic dependency resolution.
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/images/dashboard.png" alt="Aventra dashboard with event overview, calendar, budget and upcoming tasks" width="100%">
+      <br><strong>Dashboard</strong>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/images/timeline.png" alt="Aventra Timeline showing task execution sequence and milestone" width="100%">
+      <br><strong>Timeline &amp; milestones</strong>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/images/budget.png" alt="Aventra Budget page with allocations, expense tracker and budget distribution" width="100%">
+      <br><strong>Budget management</strong>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/images/vendors.png" alt="Aventra Vendor Checklist with booking statuses" width="100%">
+      <br><strong>Vendor checklist</strong>
+    </td>
+  </tr>
+</table>
 
-Aventra solves this via a **hybrid architecture**:
-1. **Gemini AI** (`google-genai`): Interprets natural-language intent, extracts event parameters, and generates rich event themes and actionable task templates.
-2. **PlanForge Constraint Engine**: A deterministic optimization module built in Python utilizing Google OR-Tools, topological graph sorting, and cycle detection to enforce budget ceilings, preserve mandatory expenses, and guarantee feasible scheduling.
+<p align="center">
+  <img src="docs/images/ai-workspace.png" alt="Aventra AI Workspace for entering a natural-language event replan request" width="100%">
+</p>
+<p align="center"><em>AI Workspace · preview a proposed revision before deciding whether to apply it</em></p>
 
-> **PromptWars Rule Compliance**: Aventra does not use recommendation algorithms, vendor ranking, or automated vendor matching. Vendor tracking is strictly a manual organization checklist.
+The **My Events** and **Tasks** pages are implemented, but screenshots for those pages were not supplied and are not represented here.
 
----
+## Why Aventra?
 
-## 2. Visual Design & Architecture
+Planning an event means coordinating dates, people, tasks, costs, and vendors—often across separate tools. Aventra brings those records into one event workspace. It helps organizers track what is planned and committed, while **PlanForge** checks budget and schedule constraints instead of leaving feasibility entirely to a language model.
 
-The user interface follows the clean, professional visual layout of the **Aventik** reference design:
-- **Clean Minimalist Theme**: Bright white primary background with soft grey surrounding surfaces (`#f4f6f8`), thin light-grey borders (`#e8eaed`), subtle shadows, and dark navy headings (`#1a2b4a`).
-- **Signature Blue Accent**: `#2F80ED` primary accent with glowing blue stat card highlights.
-- **Left Navigation Sidebar**: Aventra logo, Dashboard, My Events, Budget, Timeline, Tasks, Vendors, and AI Workspace.
-- **Center Canvas**: Top search/navigation bar, running event overview with attendee bubbles, 3 key metrics (Total Budget, Planned, Actuals), PlanForge feasibility card, and tabbed schedule table with embedded visual Gantt blocks.
-- **Right Panel**: Month-by-month mini calendar with highlight day, real-time activity stream, and dynamic event output sparkline.
+## What is implemented
 
----
+- **Event creation and management** — create, view, update, and delete events; capture event details and generate a proposed baseline plan. Groq-powered generation is optional; a deterministic template fallback is available without it.
+- **Dashboard and My Events** — review event information and navigate between events and planning areas.
+- **Task management** — create and update tasks, including status, duration, deadlines, priorities, milestones, assignees, and dependencies.
+- **Timeline** — inspect task ordering, milestone status, dependencies, and schedule conflicts.
+- **Budget management** — manage budget categories and line-item expenses, including estimated and actual costs and payment status.
+- **Vendor checklist** — manually track vendor details, estimated costs, and booking status. This is an organizer-maintained checklist, not a vendor marketplace or matching system.
+- **AI-assisted replanning** — request proposed budget, date, or guest-count changes in natural language; review a preview and feasibility details; then accept or reject.
+- **Plan history** — accepted revisions are saved as plan versions with feasibility details and a change summary.
+- **Constraint-aware acceptance** — infeasible previews are blocked, and the backend acceptance endpoint independently rechecks existing financial exposure before applying a revision.
 
-## 3. Core Features
+## PlanForge: deterministic checks around proposed plans
 
-### A. Event Creation & Intelligent Baseline Synthesis
-- Input validation for event name, event type (wedding, birthday, college fest, community, corporate, other), target date, location, guest count, and total budget.
-- Optional configuration of **Mandatory Fixed Expenses** (e.g., non-negotiable venue deposits or permits).
-- Generates structured planning data via Gemini AI when configured, or uses deterministic templates when no API key is provided (honestly labeled as template-based).
-- Automatically runs PlanForge validation and establishes Plan Version 1.
+PlanForge is Aventra's Python constraint-validation layer. Groq can interpret a planning request and return a structured proposal; PlanForge evaluates applicable budget and schedule conditions before that proposal is presented for acceptance.
 
-### B. PlanForge Constraint Engine
-Implemented as an independent, deterministic Python module in `backend/app/planforge/`:
-- **Budget Constraints (`budget_engine.py`)**:
-  - Total allocated budget must never exceed available budget.
-  - Mandatory expenses are strictly preserved and never silently reduced.
-  - Fixed expenses remain locked to their stated amounts.
-  - Variable expenses are scaled proportionally within remaining bounds.
-  - Detects impossible budget requirements and reports the **exact shortfall** in INR (`₹`).
-- **Scheduling Constraints (`scheduling_engine.py`)**:
-  - Validates durations, deadlines, and prerequisites.
-  - Kahn's algorithm for topological sorting of tasks.
-  - Depth-First Search (DFS) with three-color marking for cycle detection.
-  - Flags impossible deadlines and tasks that would overrun the hard event date.
-- **Unified Validator (`validator.py`)**:
-  - Outputs structured feasibility results: `is_feasible`, `overall_status` (`feasible`, `warning`, `infeasible`), specific constraint violations, and human-readable explanations.
+### Implemented checks
 
-### C. Signature Feature: Constraint-Aware Intelligent Replanning
-Modifying event parameters in natural language (e.g. *"Reduce my event budget from ₹250,000 to ₹180,000 and move the event two days earlier"*):
-1. **Parse Changes**: Natural language parsed into structured parameters (`new_budget`, `new_date`, `new_guest_count`).
-2. **Side-by-Side Preview**: Displays original plan versus revised plan before modifying anything.
-3. **PlanForge Validation**: Automatically tests the proposed revision. If mandatory costs exceed the new budget or tasks cannot finish in time, the exact violation and shortfall are highlighted.
-4. **User Control (Accept / Reject)**: The user inspects the preview and explicitly chooses to Accept or Reject. Original database state is never touched before acceptance.
-5. **Version History**: Accepted revisions are archived as new immutable plan versions with change summaries and feasibility snapshots.
+| Area | What is checked |
+| --- | --- |
+| Budget allocations | Allocations are evaluated against the total budget. Mandatory and fixed items are preserved; variable allocations may be scaled within the available amount. Infeasible mandatory/fixed requirements report a shortfall. |
+| Task scheduling | Task dependencies are ordered topologically. Circular dependencies, impossible task deadlines, and tasks that finish after the event date are reported as schedule conflicts. |
+| Existing financial exposure during replanning | The proposed budget must cover paid expenses and estimated costs for vendors in `booked` or `confirmed` status. Other vendor statuses, including `cancelled`, are excluded from active commitments. |
+| Revision acceptance | A preview marked infeasible cannot be accepted. Acceptance checks financial exposure again on the backend; event data is only updated for an accepted revision. |
 
-### D. Budget & Expense Management
-- Category allocation tracking with interactive **Recharts** distribution visualization.
-- Line-item expense records with estimated vs. actual costs and payment status.
-- Real-time over-allocation and overspending warning banners.
+**Guest-count limitation:** guest count can be included in a revision preview and applied when accepted, but Aventra does not currently validate guest count against venue capacity, catering limits, or another guest-count constraint. Passing the implemented checks is not a guarantee that every real-world event requirement is satisfied.
 
-### E. Task & Timeline Management
-- Interactive task list with priority badges (`critical`, `high`, `medium`, `low`), duration, and due date.
-- Visual timeline with dependency connections and milestone indicators.
-- Instant task completion toggles that update dashboard statistics in real time.
+### Replanning workflow
 
-### F. Vendor Checklist
-- Manual checklist for tracking vendor/service category, company name, contact person, phone, email, estimated cost, and booking stage (`not_contacted`, `contacted`, `negotiating`, `booked`, `confirmed`).
-
----
-
-## 4. Tech Stack
-
-- **Frontend**: React 19, TypeScript, Vite, Tailwind CSS v4, Lucide React, Recharts, React Router v7.
-- **Backend**: Python 3.13, FastAPI, SQLAlchemy, SQLite, Pydantic v2, Google OR-Tools.
-- **AI Integration**: Google Gemini API via official `google-genai` Python SDK (with deterministic fallback mode).
-- **Testing**: Pytest, FastAPI TestClient.
-
----
-
-## 5. Project Structure
-
+```mermaid
+flowchart LR
+    A[Organizer request] --> B[Groq interpretation or template fallback]
+    B --> C[Revision preview]
+    C --> D[PlanForge budget and schedule checks]
+    C --> E[Paid expenses plus active vendor commitments]
+    D --> F{Feasible?}
+    E --> F
+    F -->|No| G[Show violations; reject acceptance]
+    F -->|Yes| H[Organizer chooses whether to accept]
+    H -->|Accept| I[Backend rechecks financial exposure and saves a new version]
+    H -->|Reject| J[Keep existing event plan]
 ```
+
+## How it works
+
+1. **Create an event** and enter its planning details.
+2. **Organize the plan** by managing tasks, dependencies, budget categories, expenses, vendors, and schedule.
+3. **Request a revision** in the AI Workspace, such as a budget or date change.
+4. **Review the preview** and the deterministic PlanForge feasibility result.
+5. **Accept or reject** the proposal. Infeasible revisions are blocked; accepted revisions are saved as a new plan version.
+
+## System architecture
+
+```mermaid
+flowchart LR
+    U[Organizer] --> FE[React, TypeScript, Vite]
+    FE -->|REST API /api/v1| API[FastAPI]
+    API --> SVC[Application services]
+    SVC -->|Optional structured planning proposal| AI[Groq API]
+    AI --> SVC
+    SVC --> PF[PlanForge validator]
+    PF --> B[Budget engine]
+    PF --> T[Scheduling engine]
+    B --> PF
+    T --> PF
+    PF -->|Feasibility result| API
+    API --> ORM[SQLAlchemy]
+    ORM --> DB[(SQLite locally<br/>PostgreSQL when configured)]
+```
+
+The frontend uses the `/api/v1` API. FastAPI routes delegate to application services and SQLAlchemy models. PlanForge performs deterministic validation in the backend; Groq is an optional proposal-generation service, not the source of feasibility decisions.
+
+## Technology
+
+| Layer | Technologies |
+| --- | --- |
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS v4, React Router, Recharts, Lucide |
+| Backend | Python, FastAPI, Pydantic, SQLAlchemy |
+| Planning | PlanForge budget and scheduling validators, Google OR-Tools |
+| Database | SQLite for local development; PostgreSQL through psycopg when `DATABASE_URL` is configured |
+| AI | Groq API using the official Python SDK; deterministic template fallback |
+| Testing | Pytest, FastAPI TestClient |
+| Deployment configuration | Vercel frontend, Render web service, Neon PostgreSQL — prepared, not deployed |
+
+## Getting started
+
+### Prerequisites
+
+- Python 3.10 or newer
+- Node.js 20.19+ or 22.12+ and npm (Vite 8-compatible versions)
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/sruthi-r-22/aventra.git
+cd aventra
+```
+
+### 2. Set up the backend
+
+Create and activate a virtual environment, then install the backend requirements:
+
+```bash
+cd backend
+python -m venv .venv
+```
+
+PowerShell:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+Copy-Item ..\.env.example .env
+```
+
+macOS/Linux:
+
+```bash
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+cp ../.env.example .env
+```
+
+Edit `backend/.env` only if needed. It contains placeholders, not credentials:
+
+```dotenv
+GROQ_API_KEY=your_groq_api_key_here
+DATABASE_URL=sqlite:///./aventra.db
+CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+```
+
+The backend defaults to SQLite, creating `backend/aventra.db` when run from the `backend` directory. If `GROQ_API_KEY` is not configured, planning uses the deterministic fallback templates. Never commit `.env` or real credentials.
+
+Start the API from `backend/`:
+
+```bash
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+- API documentation: <http://localhost:8000/api/docs>
+- Health check: <http://localhost:8000/api/health>
+
+### 3. Set up the frontend
+
+In a second terminal, from the repository root:
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+Open <http://localhost:5173>. For local development, leave `VITE_API_URL` unset or blank; Vite's existing `/api` proxy targets the local backend. For a separate backend origin, set `VITE_API_URL` to the origin only; the client appends `/api/v1`.
+
+## Testing and reliability
+
+Run the backend automated tests from `backend/`:
+
+```bash
+python -m pytest tests/ -q
+```
+
+The current test files cover API behavior and replanning, PlanForge budget and scheduling constraints, and database URL/CORS deployment configuration:
+
+- `backend/tests/test_api.py`
+- `backend/tests/test_planforge.py`
+- `backend/tests/test_deployment_config.py`
+
+Run the frontend TypeScript check and production bundle from `frontend/`:
+
+```bash
+npm run build
+```
+
+PlanForge validation and the backend's acceptance checks are safeguards; they do not replace operational review of vendors, contracts, venue capacity, or other real-world requirements.
+
+## Deployment status
+
+Deployment configuration is prepared for **Vercel** (frontend), **Render Free Web Service** (FastAPI), and **Neon Free PostgreSQL**. **Aventra is not currently documented as deployed; no live demo URL is available.**
+
+- `frontend/vercel.json` provides single-page-app route fallback. Configure Vercel with `frontend` as the project root and set `VITE_API_URL` to the Render service origin.
+- `render.yaml` defines the backend root, build/start commands, free plan, health check, and environment-variable placeholders.
+- Set `DATABASE_URL`, `GROQ_API_KEY`, and the allowed frontend origins in Render's environment settings. Do not put credentials in the repository.
+- PostgreSQL URLs are normalized to use psycopg. SQLite remains the local default; initialization creates missing tables and only applies the existing compatibility-column change to SQLite.
+
+Deployment still requires creating/configuring the provider services and entering your own secret values. See [Render configuration](./render.yaml), [Vercel configuration](./frontend/vercel.json), and the environment templates [`.env.example`](./.env.example) and [`frontend/.env.example`](./frontend/.env.example).
+
+## Project structure
+
+```text
 aventra/
 ├── backend/
 │   ├── app/
-│   │   ├── api/             # REST endpoints (events, budget, tasks, vendors, replan)
-│   │   ├── models/          # SQLAlchemy ORM models (event, budget, task, vendor, plan)
-│   │   ├── schemas/         # Pydantic validation schemas
-│   │   ├── services/        # Business logic & Gemini AI service
-│   │   ├── planforge/       # PlanForge deterministic constraint engine
-│   │   │   ├── budget_engine.py
-│   │   │   ├── scheduling_engine.py
-│   │   │   └── validator.py
-│   │   ├── config.py        # Settings & environment variables
-│   │   ├── database.py      # SQLite connection & session management
-│   │   └── main.py          # FastAPI application entry point
+│   │   ├── api/                 # Events, budget, tasks, vendors, replanning
+│   │   ├── models/              # SQLAlchemy models
+│   │   ├── planforge/           # Budget, scheduling, unified validation
+│   │   ├── schemas/             # API schemas
+│   │   ├── services/            # Event, financial, and AI/replan services
+│   │   ├── config.py
+│   │   ├── database.py
+│   │   └── main.py
 │   ├── tests/
-│   │   ├── test_planforge.py# PlanForge constraint engine test suite (23 tests)
-│   │   └── test_api.py      # API endpoints & replanning test suite (17 tests)
-│   ├── pyproject.toml
 │   └── requirements.txt
+├── docs/
+│   └── images/                  # Supplied, optimized application screenshots
 ├── frontend/
 │   ├── src/
-│   │   ├── api/             # Typed API client
-│   │   ├── components/      # Sidebar, Topbar, MiniCalendar, CreateEventModal
-│   │   ├── context/         # AppContext for global event state
-│   │   ├── pages/           # Dashboard, MyEvents, Budget, Timeline, Tasks, Vendors, AIWorkspace
-│   │   ├── utils/           # Formatters (INR currency, dates)
-│   │   ├── App.tsx          # Application routing & layout
-│   │   ├── index.css        # Tailwind styling & Inter typography
-│   │   └── main.tsx
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── vite.config.ts
+│   │   ├── api/
+│   │   ├── components/
+│   │   ├── context/
+│   │   └── pages/               # Landing, dashboard, events, tasks, budget,
+│   │                            # timeline, vendors, AI Workspace
+│   ├── .env.example
+│   └── vercel.json
 ├── .env.example
-├── .gitignore
-└── README.md
+├── README.md
+└── render.yaml
 ```
 
----
+## Limitations and next steps
 
-## 6. Setup & Execution Instructions
+- Guest-count revisions are supported, but guest counts are not checked against venue capacity or catering constraints.
+- Vendor management is a manual checklist; discovery, ranking, booking, and vendor recommendations are not implemented.
+- Pending replan previews are stored in process memory, so a backend restart invalidates outstanding preview tokens.
+- Vercel/Render/Neon deployment is configured but still needs provider setup and credentials.
+- Screenshots for **My Events** and **Tasks** are not included; only supplied screenshots are shown above.
 
-### Prerequisites
-- Python 3.10+
-- Node.js 18+ and npm
+## Hackathon context and acknowledgements
 
-### Backend Setup
-1. Open a terminal in the project root:
-   ```bash
-   cd backend
-   ```
-2. Install Python dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. (Optional) Set your Gemini API key in an environment variable or `.env` file:
-   ```bash
-   GEMINI_API_KEY="your_api_key_here"
-   ```
-   *(If omitted, Aventra automatically operates in deterministic template fallback mode with full PlanForge constraint validation).*
+Aventra was prepared for **PromptWars Virtual Challenge 5: Celebration & Event Planner**. Vendor tracking is intentionally manual; the project does not implement vendor recommendations, ranking, or matching.
 
-4. Run the FastAPI backend server:
-   ```bash
-   python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
-   ```
-   - API Documentation: `http://localhost:8000/api/docs`
-   - Health Check: `http://localhost:8000/api/health`
-
-### Frontend Setup
-1. In a separate terminal:
-   ```bash
-   cd frontend
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the Vite development server:
-   ```bash
-   npm run dev
-   ```
-4. Open your browser at `http://localhost:5173`.
-
-## Free Deployment Preparation
-
-The project is configured for Vercel (frontend), Render Free Web Service (API), and Neon Free PostgreSQL. No service has been created or deployed by these code changes.
-
-### Render API
-
-The root `render.yaml` sets the backend root directory, build command, start command, free plan, and health check. During Render setup, provide these environment variables:
-
-- `DATABASE_URL`: Neon PostgreSQL connection string. Credentials belong in Render's environment settings, not in source control.
-- `GROQ_API_KEY`: Your existing Groq API key, stored as a Render secret.
-- `CORS_ORIGINS`: Comma-separated exact frontend origins, for example the Vercel production domain and any preview domain you choose to allow.
-
-The backend defaults to `sqlite:///./aventra.db` for local development. PostgreSQL URLs (`postgresql://` or `postgres://`) are routed through the psycopg driver. Startup creates missing tables without dropping data; the existing `planning_mode` compatibility change is limited to SQLite.
-
-### Vercel frontend
-
-Create the Vercel project with `frontend` as its root directory. Vite's `npm run build` produces `dist`; `frontend/vercel.json` provides SPA route fallback. Set `VITE_API_URL` to the Render service's origin (scheme and host only, without `/api/v1`). The frontend appends `/api/v1` itself.
-
-Keep `VITE_API_URL` public and free of credentials. Set Groq and database secrets only in Render. For local development, leave `VITE_API_URL` unset so the Vite `/api` proxy continues targeting `http://localhost:8000`.
-
----
-
-## 7. Testing & Verification
-
-Aventra includes 40 comprehensive automated tests covering constraint feasibility, shortfall detection, cycle detection, replanning immutability, and backend API contracts.
-
-To execute the test suite:
-```bash
-cd backend
-python -m pytest tests/ -v
-```
-
-### Verified Test Results
-```
-tests/test_api.py::TestHealthEndpoint::test_health_check PASSED
-tests/test_api.py::TestEventAPI::test_create_event_success PASSED
-tests/test_api.py::TestEventAPI::test_create_event_invalid_budget PASSED
-tests/test_api.py::TestEventAPI::test_create_event_empty_name PASSED
-tests/test_api.py::TestEventAPI::test_list_events PASSED
-tests/test_api.py::TestEventAPI::test_get_event_not_found PASSED
-tests/test_api.py::TestEventAPI::test_get_event_after_create PASSED
-tests/test_api.py::TestEventAPI::test_validate_plan PASSED
-tests/test_api.py::TestBudgetAPI::test_get_budget_summary PASSED
-tests/test_api.py::TestBudgetAPI::test_add_expense PASSED
-tests/test_api.py::TestTaskAPI::test_list_tasks PASSED
-tests/test_api.py::TestTaskAPI::test_create_task PASSED
-tests/test_api.py::TestTaskAPI::test_update_task_status PASSED
-tests/test_api.py::TestReplanAPI::test_replan_preview_generated PASSED
-tests/test_api.py::TestReplanAPI::test_replan_original_unchanged_before_accept PASSED
-tests/test_api.py::TestReplanAPI::test_replan_accept_saves_new_version PASSED
-tests/test_api.py::TestReplanAPI::test_get_plan_history PASSED
-tests/test_planforge.py::TestBudgetConstraintEngine::test_feasible_plan PASSED
-tests/test_planforge.py::TestBudgetConstraintEngine::test_mandatory_expenses_preserved PASSED
-tests/test_planforge.py::TestBudgetConstraintEngine::test_budget_shortfall_exact_amount PASSED
-tests/test_planforge.py::TestBudgetConstraintEngine::test_fixed_expense_not_reduced PASSED
-tests/test_planforge.py::TestBudgetConstraintEngine::test_zero_budget_infeasible PASSED
-tests/test_planforge.py::TestBudgetConstraintEngine::test_variable_items_scaled_when_over_budget PASSED
-tests/test_planforge.py::TestBudgetConstraintEngine::test_mandatory_violation_in_violations_list PASSED
-tests/test_planforge.py::TestBudgetConstraintEngine::test_budget_change_impact_detection PASSED
-tests/test_planforge.py::TestBudgetConstraintEngine::test_empty_items_feasible PASSED
-tests/test_planforge.py::TestSchedulingConstraintEngine::test_simple_schedule_feasible PASSED
-tests/test_planforge.py::TestSchedulingConstraintEngine::test_circular_dependency_detected PASSED
-tests/test_planforge.py::TestSchedulingConstraintEngine::test_impossible_deadline_detected PASSED
-tests/test_planforge.py::TestSchedulingConstraintEngine::test_dependency_ordering PASSED
-tests/test_planforge.py::TestSchedulingConstraintEngine::test_event_date_respected PASSED
-tests/test_planforge.py::TestSchedulingConstraintEngine::test_empty_tasks_feasible PASSED
-tests/test_planforge.py::TestSchedulingConstraintEngine::test_no_circular_for_valid_deps PASSED
-tests/test_planforge.py::TestSchedulingConstraintEngine::test_days_until_event PASSED
-tests/test_planforge.py::TestSchedulingConstraintEngine::test_three_way_circular_dependency PASSED
-tests/test_planforge.py::TestPlanForgeValidator::test_fully_feasible_plan PASSED
-tests/test_planforge.py::TestPlanForgeValidator::test_budget_infeasible_makes_plan_infeasible PASSED
-tests/test_planforge.py::TestPlanForgeValidator::test_schedule_infeasible_makes_plan_infeasible PASSED
-tests/test_planforge.py::TestPlanForgeValidator::test_to_dict_serializable PASSED
-tests/test_planforge.py::TestPlanForgeValidator::test_replan_original_preserved PASSED
-
-======================= 40 passed in 3.80s =======================
-```
-
-To run frontend production build:
-```bash
-cd frontend
-npm run build
-```
-*(Builds with Vite & TypeScript without errors in <1s).*
-
----
-
-## 8. Competition Compliance & Integrity Notes
-
-- **Single Branch**: All code resides on the default `main` branch.
-- **Repository Size**: Total source size is ~1.4 MB, well below the 10 MB threshold.
-- **Security**: No secrets or API keys are committed or exposed in frontend code. Environment variables are managed securely via `.env`.
-- **Database Safety**: Local SQLite databases (`*.db`) and build directories (`dist/`, `node_modules/`) are cleanly excluded in `.gitignore`.
-- **Deterministic Math**: Budget totals, allocations, and scheduling order are strictly calculated by Python algorithms and Google OR-Tools—never hallucinated by generative AI.
+Built with the open-source communities behind React, FastAPI, SQLAlchemy, Google OR-Tools, and the other libraries listed above.
