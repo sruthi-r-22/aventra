@@ -18,7 +18,9 @@
 
 ## Product preview
 
-The interface uses an understated cream, forest-green, and mint palette. These are screenshots of the application supplied for this project; they have been losslessly optimized for the repository.
+The interface uses an understated cream, forest-green, and mint palette. These screenshots show the current application.
+
+**Live demo:** [https://aventra-mocha.vercel.app](https://aventra-mocha.vercel.app/)
 
 <p align="center">
   <img src="docs/images/landing.png" alt="Aventra landing page with the Events, made smarter hero" width="100%">
@@ -61,8 +63,8 @@ Planning an event means coordinating dates, people, tasks, costs, and vendors—
 
 ## What is implemented
 
-- **User authentication & session management** — self-service user signup, login, and logout powered by FastAPI, PyJWT, and secure bcrypt password hashing. Supports HttpOnly/SameSite cookies with an in-memory Bearer token fallback.
-- **Multi-user event isolation** — strict backend ownership checks ensure each authenticated organizer only accesses and modifies their own events, tasks, budgets, expenses, vendors, and replan proposals. Unauthenticated requests return `401 Unauthorized`; foreign or unowned resources return `404 Not Found` to prevent ID enumeration.
+- **User authentication & session management** — self-service user signup, login, and logout powered by FastAPI, PyJWT, and bcrypt password hashing. Supports HttpOnly/SameSite cookies with an in-memory Bearer token fallback; the `Secure` cookie flag is configurable and enabled for the configured HTTPS deployment.
+- **Multi-user event isolation** — backend ownership checks restrict authenticated organizers to their own events and event-related tasks, budgets, expenses, vendors, and replan proposals. Unauthenticated requests return `401 Unauthorized`; inaccessible events return `404 Not Found`, avoiding disclosure of whether a foreign event exists.
 - **Event creation and management** — create, view, update, and delete events; capture event details and generate a proposed baseline plan. Groq-powered generation is optional; a deterministic template fallback is available without it.
 - **Dashboard and My Events** — review event information and navigate between events and planning areas.
 - **Task management** — create and update tasks, including status, duration, deadlines, priorities, milestones, assignees, and dependencies.
@@ -75,24 +77,24 @@ Planning an event means coordinating dates, people, tasks, costs, and vendors—
 
 ## Authentication and user isolation
 
-Aventra implements end-to-end user authentication and complete multi-user data isolation:
+Aventra implements user authentication and backend event-ownership checks:
 
 ### Architecture & Security Flow
 
-- **Registration (`POST /api/v1/auth/register`)**: Validates email and name schemas, enforces unique accounts, and hashes passwords with `bcrypt` (salted, resistant to rainbow tables and brute-force attacks) before persisting to the database.
-- **Authentication (`POST /api/v1/auth/login`)**: Validates credentials using constant-time hash comparisons and issues an industry-standard signed JSON Web Token (JWT) using `PyJWT` with HS256 encryption. The token is transmitted in the response payload and set as a hardened `HttpOnly`, `SameSite`, and `Secure` cookie.
+- **Registration (`POST /api/v1/auth/register`)**: Validates and normalizes the email format, requires a name field, enforces unique accounts, and hashes passwords with `bcrypt` before persisting them.
+- **Authentication (`POST /api/v1/auth/login`)**: Verifies credentials against the stored bcrypt password hash and issues a signed JSON Web Token (JWT) using `PyJWT` with the HS256 signing algorithm. The token is returned in the response payload and set in an `HttpOnly` cookie. `SameSite` and `Secure` behavior are configurable; the deployment configuration enables `Secure` for HTTPS and uses `SameSite=None` for the cross-site frontend/backend setup.
 - **Session Verification & Logout (`GET /api/v1/auth/me`, `POST /api/v1/auth/logout`)**: Validates active tokens, exposes the authenticated organizer's profile, and flushes session cookies upon sign-out.
-- **Dual Credential Resolution**: The backend inspects both incoming `access_token` cookies and `Authorization: Bearer <token>` headers, ensuring reliable operation across modern browsers, mobile viewports, and strict privacy modes.
+- **Dual Credential Resolution**: The backend accepts an `access_token` cookie or an `Authorization: Bearer <token>` header.
 
 ### Ownership Enforcement & Data Isolation
 
 - **Route Guarding**: All event-management endpoints require an authenticated user via FastAPI's `current_user: User = Depends(get_current_user)` dependency.
-- **Sub-resource Protection**: Every endpoint touching tasks, budget categories, line-item expenses, vendors, timeline dependencies, or replan proposals executes `get_user_event_or_404(db, event_id, current_user.id)` before any database read or mutation.
-- **Anti-Enumeration Protection**: Unauthorized access attempts to resources owned by other users return `404 Not Found` rather than `403 Forbidden`, preventing malicious actors from probing valid event or task IDs.
-- **Legacy Record Safety**: Pre-existing production records with `user_id IS NULL` remain preserved in the database but are completely inaccessible through public or authenticated API endpoints.
+- **Sub-resource Ownership Checks**: Event-related endpoints verify event ownership before reading or changing that event's tasks, budget, expenses, vendors, timeline dependencies, or replan proposals.
+- **Non-disclosing Event Responses**: Requests for inaccessible events return `404 Not Found` rather than identifying whether an event belongs to another account.
+- **Legacy Record Handling**: Events without an owner are excluded from authenticated event listings and cannot be accessed through owner-checked event endpoints.
 - **Client Route Protection**: The landing page remains publicly accessible. Workspace routes (`/events`, `/dashboard`, `/budget`, `/timeline`, `/tasks`, `/vendors`, `/ai-workspace`, `/settings`) are wrapped in `ProtectedRoute`, automatically prompting unauthenticated visitors to sign in or create an account via the modal dialog.
 
-### Neon PostgreSQL Schema & Alembic Migrations
+### PostgreSQL Schema & Alembic Migrations
 
 - **`users` Table**: Contains `id` (UUID Primary Key), `email` (unique index), `name`, `hashed_password`, and timestamp columns (`created_at`, `updated_at`).
 - **`events.user_id` Foreign Key**: Binds each event to its owner (`FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE`) with an indexed column for query performance.
@@ -168,10 +170,10 @@ The frontend interacts with the `/api/v1` API using session cookies and in-memor
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS v4, React Router, Recharts, Lucide |
 | Backend | Python, FastAPI, Pydantic, SQLAlchemy |
 | Authentication & Security | PyJWT (HS256 tokens), bcrypt password hashing, HttpOnly/SameSite session cookies, backend ownership verification |
-| Planning | PlanForge budget and scheduling validators, Google OR-Tools |
+| Planning | PlanForge validators; Google OR-Tools for budget allocation, Aventra's deterministic dependency and deadline analysis for scheduling |
 | Database & Migrations | Neon PostgreSQL (production) through psycopg, SQLite (local development), Alembic schema migrations |
 | AI | Groq API using the official Python SDK; deterministic template fallback |
-| Testing | Pytest, FastAPI TestClient (71 automated tests) |
+| Testing | Pytest, FastAPI TestClient (73 backend tests in the latest verified run) |
 | Deployment configuration | Vercel frontend, Render web service, Neon PostgreSQL — prepared, not deployed |
 
 ## Getting started
@@ -228,6 +230,8 @@ COOKIE_SECURE=false
 COOKIE_SAMESITE=lax
 ```
 
+These values are local-development examples. Do not commit `.env` files, real API keys, JWT secrets, or production database credentials. Deployed environments should use a strong, unique `JWT_SECRET_KEY` rather than the development default.
+
 Apply database migrations:
 
 ```bash
@@ -277,17 +281,23 @@ Run the frontend TypeScript check and production bundle from `frontend/`:
 npm run build
 ```
 
+Event and task API methods use TypeScript request and response types to catch data-shape mismatches during development. Event loading reports failures separately from an empty event list and preserves previously loaded events when a refresh fails for the same signed-in user.
+
+In an isolated SQLite benchmark, event listing for 50 events was reduced from 252 to 6 SQL queries. This is a local benchmark result and should not be interpreted as production database performance.
+
 PlanForge validation and the backend's acceptance checks are safeguards; they do not replace operational review of vendors, contracts, venue capacity, or other real-world requirements.
 
 ## Deployment status
 
-Deployment configuration is prepared for **Vercel** (frontend), **Render Free Web Service** (FastAPI), and **Neon Free PostgreSQL**. **Aventra is not currently documented as deployed; no live demo URL is available.**
+**Live frontend:** [https://aventra-mocha.vercel.app](https://aventra-mocha.vercel.app/)
+
+Deployment configuration is provided for **Vercel** (frontend), **Render Free Web Service** (FastAPI), and **Neon PostgreSQL**.
 
 - `frontend/vercel.json` provides single-page-app route fallback. Configure Vercel with `frontend` as the project root and set `VITE_API_URL` to the Render service origin.
 - `render.yaml` defines the backend root, build/start commands, free plan, health check, and environment variables:
   - `PYTHON_VERSION`: Explicitly set to `3.12.8` for OR-Tools compatibility.
-  - `DATABASE_URL`: Connection string for Neon PostgreSQL.
-  - `JWT_SECRET_KEY`: Cryptographic signing key generated automatically on Render (`generateValue: true`).
+  - `DATABASE_URL`: Connection string for the configured PostgreSQL database.
+  - `JWT_SECRET_KEY`: JWT signing key generated automatically on Render (`generateValue: true`).
   - `COOKIE_SECURE`: Configured to `"true"` for production HTTPS.
   - `COOKIE_SAMESITE`: Configured to `"none"` to support cross-site session cookies between Vercel and Render.
   - `CORS_ORIGINS`: Allowed frontend origins with credential support.
@@ -313,7 +323,7 @@ aventra/
 │   │   ├── config.py
 │   │   ├── database.py
 │   │   └── main.py
-│   ├── tests/                   # 71 tests (test_auth, test_api, test_planforge, etc.)
+│   ├── tests/                   # 73 tests (test_auth, test_api, test_planforge, etc.)
 │   ├── alembic.ini
 │   └── requirements.txt
 ├── docs/
