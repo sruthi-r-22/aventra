@@ -11,7 +11,7 @@ import CreateEventModal from '../components/CreateEventModal';
 import { formatINR, formatDate } from '../utils/format';
 
 export default function MyEvents() {
-  const { events, activeEventId, setActiveEventId, refreshEvents } = useApp();
+  const { events, activeEventId, setActiveEventId, loading, eventsError, refreshEvents } = useApp();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [isModalOpen, setIsModalOpen] = useState(searchParams.get('create') === 'true');
@@ -80,7 +80,30 @@ export default function MyEvents() {
       </div>
 
       {/* Events Grid */}
-      {events.length === 0 ? (
+      {eventsError && events.length > 0 && (
+        <div role="alert" className="flex items-center justify-between gap-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+          <span>{eventsError}</span>
+          <button type="button" onClick={() => refreshEvents()} className="font-bold underline">
+            Retry
+          </button>
+        </div>
+      )}
+      {loading && events.length === 0 ? (
+        <div role="status" className="rounded-3xl border border-gray-100 bg-white p-12 text-center text-sm text-gray-500">
+          Loading your events...
+        </div>
+      ) : eventsError && events.length === 0 ? (
+        <div role="alert" className="rounded-3xl border border-rose-200 bg-rose-50 p-12 text-center">
+          <p className="text-sm text-rose-800">{eventsError}</p>
+          <button
+            type="button"
+            onClick={() => refreshEvents()}
+            className="mt-4 rounded-xl bg-[#164B3D] px-4 py-2 text-xs font-bold text-white hover:bg-[#103D32]"
+          >
+            Retry
+          </button>
+        </div>
+      ) : events.length === 0 ? (
         <div className="bg-white rounded-3xl border border-gray-100 p-12 text-center shadow-xs">
           <Calendar size={32} className="mx-auto text-gray-400 mb-3" />
           <h3 className="text-lg font-bold text-[#17252B]">No events created yet</h3>
