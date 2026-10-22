@@ -1,30 +1,10 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import api from '../api/client';
+import type { EventItem } from '../api/types';
 import { useAuth } from './AuthContext';
 
-export interface EventItem {
-  id: string;
-  name: string;
-  event_type: string;
-  planning_mode?: string;
-  event_date: string;
-  location: string;
-  guest_count: number;
-  total_budget: number;
-  status: string;
-  days_remaining: number;
-  allocated_budget: number;
-  unallocated_budget?: number;
-  actual_expenses: number;
-  unspent_budget?: number;
-  remaining_budget?: number;
-  task_count: number;
-  completed_tasks: number;
-  feasibility_status: string;
-  description?: string;
-  preferences?: string;
-}
+export type { EventItem } from '../api/types';
 
 interface AppContextType {
   events: EventItem[];

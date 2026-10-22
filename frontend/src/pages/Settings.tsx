@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import api from '../api/client';
+import type { EventStatus } from '../api/types';
 import { formatINR } from '../utils/format';
 
 export default function Settings() {
@@ -29,7 +30,7 @@ export default function Settings() {
     location: '',
     guest_count: 0,
     total_budget: 0,
-    status: 'active',
+    status: 'active' as EventStatus,
     preferences: '',
     description: '',
   });
@@ -234,7 +235,7 @@ export default function Settings() {
                 </label>
                 <select
                   value={formData.status}
-                  onChange={(e) => handleInputChange('status', e.target.value)}
+                  onChange={(e) => handleInputChange('status', e.target.value as EventStatus)}
                   className="w-full px-3.5 py-2.5 bg-[#FAF9F5] border border-[#E2E6DC] rounded-xl text-xs text-[#17252B] font-medium focus:bg-white focus:border-[#52B9A3] focus:outline-none transition-all"
                 >
                   <option value="draft">Draft</option>

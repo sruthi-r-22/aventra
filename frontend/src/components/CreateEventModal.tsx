@@ -5,6 +5,7 @@ import {
   Clock
 } from 'lucide-react';
 import api from '../api/client';
+import type { EventType } from '../api/types';
 import { useApp } from '../context/AppContext';
 import { formatINR } from '../utils/format';
 
@@ -24,7 +25,7 @@ export default function CreateEventModal({ isOpen, onClose, onCreated }: Props) 
 
   // Common Form Fields
   const [name, setName] = useState('');
-  const [eventType, setEventType] = useState('wedding');
+  const [eventType, setEventType] = useState<EventType>('wedding');
   const [eventDate, setEventDate] = useState('');
   const [location, setLocation] = useState('');
   const [guestCount, setGuestCount] = useState<number>(100);
@@ -120,7 +121,7 @@ export default function CreateEventModal({ isOpen, onClose, onCreated }: Props) 
       const payload = {
         name: name.trim(),
         event_type: eventType,
-        planning_mode: 'manual',
+        planning_mode: 'manual' as const,
         event_date: eventDate,
         location: location.trim(),
         guest_count: Number(guestCount),
@@ -189,7 +190,7 @@ export default function CreateEventModal({ isOpen, onClose, onCreated }: Props) 
       const payload = {
         name: name.trim(),
         event_type: eventType,
-        planning_mode: 'ai',
+        planning_mode: 'ai' as const,
         event_date: eventDate,
         location: location.trim(),
         guest_count: Number(guestCount),
@@ -316,7 +317,7 @@ export default function CreateEventModal({ isOpen, onClose, onCreated }: Props) 
                   </label>
                   <select
                     value={eventType}
-                    onChange={(e) => setEventType(e.target.value)}
+                    onChange={(e) => setEventType(e.target.value as EventType)}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-[#52B9A3] focus:ring-1 focus:ring-[#52B9A3]/30 bg-white"
                   >
                     <option value="wedding">Wedding</option>

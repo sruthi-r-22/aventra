@@ -1,4 +1,17 @@
 // API client for Aventra backend
+import type {
+  AIDraftRequest,
+  AIDraftResponse,
+  EventCreateRequest,
+  EventCreateResponse,
+  EventItem,
+  EventUpdateRequest,
+  TaskCreateRequest,
+  TaskItem,
+  TaskStatus,
+  TaskUpdateRequest,
+} from './types';
+
 const API_ORIGIN = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
 const BASE_URL = `${API_ORIGIN}/api/v1`;
 
@@ -55,11 +68,11 @@ export const api = {
     request<any>('/auth/me'),
 
   // Events
-  createEvent: (data: any) => request<any>('/events/', { method: 'POST', body: JSON.stringify(data) }),
-  generateAIDraft: (data: any) => request<any>('/events/ai-draft', { method: 'POST', body: JSON.stringify(data) }),
-  listEvents: () => request<any[]>('/events/'),
-  getEvent: (id: string) => request<any>(`/events/${id}`),
-  updateEvent: (id: string, data: any) => request<any>(`/events/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  createEvent: (data: EventCreateRequest) => request<EventCreateResponse>('/events/', { method: 'POST', body: JSON.stringify(data) }),
+  generateAIDraft: (data: AIDraftRequest) => request<AIDraftResponse>('/events/ai-draft', { method: 'POST', body: JSON.stringify(data) }),
+  listEvents: () => request<EventItem[]>('/events/'),
+  getEvent: (id: string) => request<EventItem>(`/events/${id}`),
+  updateEvent: (id: string, data: EventUpdateRequest) => request<EventItem>(`/events/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteEvent: (id: string) => request<void>(`/events/${id}`, { method: 'DELETE' }),
   validatePlan: (id: string) => request<any>(`/events/${id}/validate`, { method: 'POST' }),
   getActivities: (id: string) => request<any[]>(`/events/${id}/activities`),
@@ -81,13 +94,13 @@ export const api = {
     request<void>(`/events/${eventId}/budget/expenses/${expId}`, { method: 'DELETE' }),
 
   // Tasks
-  listTasks: (eventId: string) => request<any[]>(`/events/${eventId}/tasks/`),
-  createTask: (eventId: string, data: any) =>
-    request<any>(`/events/${eventId}/tasks/`, { method: 'POST', body: JSON.stringify(data) }),
-  updateTask: (eventId: string, taskId: string, data: any) =>
-    request<any>(`/events/${eventId}/tasks/${taskId}`, { method: 'PUT', body: JSON.stringify(data) }),
-  updateTaskStatus: (eventId: string, taskId: string, status: string) =>
-    request<any>(`/events/${eventId}/tasks/${taskId}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  listTasks: (eventId: string) => request<TaskItem[]>(`/events/${eventId}/tasks/`),
+  createTask: (eventId: string, data: TaskCreateRequest) =>
+    request<TaskItem>(`/events/${eventId}/tasks/`, { method: 'POST', body: JSON.stringify(data) }),
+  updateTask: (eventId: string, taskId: string, data: TaskUpdateRequest) =>
+    request<TaskItem>(`/events/${eventId}/tasks/${taskId}`, { method: 'PUT', body: JSON.stringify(data) }),
+  updateTaskStatus: (eventId: string, taskId: string, status: TaskStatus) =>
+    request<TaskItem>(`/events/${eventId}/tasks/${taskId}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   deleteTask: (eventId: string, taskId: string) =>
     request<void>(`/events/${eventId}/tasks/${taskId}`, { method: 'DELETE' }),
 

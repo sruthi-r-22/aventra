@@ -2,18 +2,19 @@ import { useState, useEffect } from 'react';
 import { CheckSquare, Plus, Trash2, CheckCircle2, Clock, UserCheck } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import api from '../api/client';
+import type { TaskItem, TaskPriority, TaskStatus } from '../api/types';
 import { formatDate } from '../utils/format';
 
 export default function Tasks() {
   const { activeEvent, activeEventId, refreshActiveEvent } = useApp();
-  const [tasks, setTasks] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [filter, setFilter] = useState<string>('all');
 
   // New task modal
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState('medium');
+  const [priority, setPriority] = useState<TaskPriority>('medium');
   const [durationDays, setDurationDays] = useState('2');
   const [dueDate, setDueDate] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
@@ -55,7 +56,7 @@ export default function Tasks() {
     loadTasks();
   }, [activeEventId]);
 
-  const handleToggleStatus = async (task: any) => {
+  const handleToggleStatus = async (task: TaskItem) => {
     if (!activeEventId) return;
     const next = task.status === 'completed' ? 'pending' : 'completed';
     try {
@@ -243,7 +244,7 @@ export default function Tasks() {
                   <select
                     value={task.status}
                     onChange={async (e) => {
-                      await api.updateTask(activeEventId!, task.id, { status: e.target.value });
+                      await api.updateTask(activeEventId!, task.id, { status: e.target.value as TaskStatus });
                       await loadTasks();
                       refreshActiveEvent();
                     }}
@@ -304,7 +305,7 @@ export default function Tasks() {
                   <label className="block text-xs font-bold text-[#66717A] uppercase mb-1.5">Priority</label>
                   <select
                     value={priority}
-                    onChange={(e) => setPriority(e.target.value)}
+                    onChange={(e) => setPriority(e.target.value as TaskPriority)}
                     className="w-full px-3 py-2.5 rounded-xl border border-[#E2E6DC] text-sm text-[#17252B] focus:outline-none focus:border-[#52B9A3] focus:ring-2 focus:ring-[#52B9A3]/20 bg-white"
                   >
                     <option value="low">Low</option>

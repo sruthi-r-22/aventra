@@ -18,6 +18,7 @@ import {
   Lightbulb,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import type { TaskStatus } from '../api/types';
 import api from '../api/client';
 import CreateEventModal from '../components/CreateEventModal';
 import { formatINR, formatDate } from '../utils/format';
@@ -172,7 +173,7 @@ export default function Dashboard() {
     }
   }, [activeEvent?.event_date]);
 
-  const handleTaskStatusChange = async (taskId: string, currentStatus: string) => {
+  const handleTaskStatusChange = async (taskId: string, currentStatus: TaskStatus) => {
     if (!activeEventId) return;
     const newStatus = currentStatus === 'completed' ? 'pending' : 'completed';
     try {
