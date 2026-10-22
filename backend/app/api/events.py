@@ -79,12 +79,7 @@ def list_events(
 ):
     """List all events owned by the authenticated user."""
     events = event_service.list_events(db, user_id=current_user.id, skip=skip, limit=limit)
-    result = []
-    for event in events:
-        summary = event_service.get_event_summary(db, event.id, user_id=current_user.id)
-        if summary:
-            result.append(summary)
-    return result
+    return event_service.get_event_summaries(db, events)
 
 
 @router.get("/{event_id}")

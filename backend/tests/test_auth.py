@@ -185,7 +185,7 @@ class TestCrossUserDataIsolation:
         # User B lists events -> does NOT see event A
         resp_b = client.get("/api/v1/events/", headers={"Authorization": f"Bearer {data['token_b']}"})
         assert resp_b.status_code == 200
-        assert not any(e["id"] == data["event_a_id"] for e in resp_b.json())
+        assert resp_b.json() == []
 
     def test_cross_user_get_event_forbidden(self, client, setup_users_and_event):
         data = setup_users_and_event

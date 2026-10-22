@@ -5,11 +5,14 @@ from datetime import date, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event as sqlalchemy_event
 from sqlalchemy.orm import sessionmaker
 
 from app.main import app
 from app.database import Base, get_db
+from app.models.budget import BudgetCategory, Expense
+from app.models.plan import PlanVersion
+from app.models.task import Task, TaskStatus
 
 # Use in-memory SQLite for tests
 TEST_DATABASE_URL = "sqlite:///./test_aventra.db"
@@ -112,6 +115,87 @@ class TestEventAPI:
         assert response.status_code == 200
         assert isinstance(response.json(), list)
         assert len(response.json()) >= 1
+
+    def test_list_events_preserves_summary_calculations(self, client, sample_event_data):
+        sample_event_data["planning_mode"] = "manual"
+        create_response = client.post("/api/v1/events/", json=sample_event_data)
+        assert create_response.status_code == 201
+        event_id = create_response.json()["id"]
+
+        db = TestingSessionLocal()
+        try:
+            db.add_all([
+                BudgetCategory(event_id=event_id, name="Venue", allocated_amount=300.0),
+                Expense(event_id=event_id, name="Catering", estimated_cost=100.0, actual_cost=75.0),
+                Expense(event_id=event_id, name="Decor", estimated_cost=20.0),
+                Task(event_id=event_id, name="Confirm venue", status=TaskStatus.completed),
+                Task(event_id=event_id, name="Send invitations", status=TaskStatus.pending),
+                PlanVersion(
+                    event_id=event_id,
+                    version_number=2,
+                    plan_data="{}",
+                    feasibility_status="needs_review",
+                ),
+            ])
+            db.commit()
+        finally:
+            db.close()
+
+        response = client.get("/api/v1/events/")
+        assert response.status_code == 200
+        summary = next(event for event in response.json() if event["id"] == event_id)
+        assert summary == {
+            "id": event_id,
+            "name": sample_event_data["name"],
+            "event_type": sample_event_data["event_type"],
+            "planning_mode": "manual",
+            "event_date": sample_event_data["event_date"],
+            "location": sample_event_data["location"],
+            "guest_count": sample_event_data["guest_count"],
+            "total_budget": sample_event_data["total_budget"],
+            "allocated_budget": 300.0,
+            "unallocated_budget": 99700.0,
+            "actual_expenses": 95.0,
+            "unspent_budget": 99905.0,
+            "remaining_budget": 99905.0,
+            "description": sample_event_data["description"],
+            "status": "active",
+            "days_remaining": summary["days_remaining"],
+            "task_count": 2,
+            "completed_tasks": 1,
+            "feasibility_status": "needs_review",
+        }
+
+    def test_list_event_query_count_does_not_grow_with_event_count(self, client, sample_event_data, monkeypatch):
+        monkeypatch.setitem(app.dependency_overrides, get_db, override_get_db)
+        sample_event_data["planning_mode"] = "manual"
+        assert client.post("/api/v1/events/", json=sample_event_data).status_code == 201
+
+        query_count = {"total": 0}
+
+        def count_query(conn, cursor, statement, parameters, context, executemany):
+            query_count["total"] += 1
+
+        sqlalchemy_event.listen(engine, "before_cursor_execute", count_query)
+        try:
+            one_event_response = client.get("/api/v1/events/")
+            one_event_queries = query_count["total"]
+
+            for index in range(9):
+                payload = {**sample_event_data, "name": f"Additional event {index}"}
+                assert client.post("/api/v1/events/", json=payload).status_code == 201
+
+            query_count["total"] = 0
+            ten_event_response = client.get("/api/v1/events/")
+            ten_event_queries = query_count["total"]
+        finally:
+            sqlalchemy_event.remove(engine, "before_cursor_execute", count_query)
+
+        assert one_event_response.status_code == 200
+        assert len(one_event_response.json()) == 1
+        assert ten_event_response.status_code == 200
+        assert len(ten_event_response.json()) == 10
+        assert one_event_queries == ten_event_queries == 6
 
     def test_get_event_not_found(self, client):
         response = client.get("/api/v1/events/nonexistent-id")

@@ -471,6 +471,78 @@ def list_events(db: Session, user_id: Optional[str] = None, skip: int = 0, limit
     return query.order_by(Event.created_at.desc()).offset(skip).limit(limit).all()
 
 
+def get_event_summaries(db: Session, events: List[Event]) -> List[Dict[str, Any]]:
+    """Build event summaries using one query per related model, regardless of event count."""
+    if not events:
+        return []
+
+    event_ids = [event.id for event in events]
+    categories_by_event: Dict[str, List[BudgetCategory]] = {}
+    for category in db.query(BudgetCategory).filter(BudgetCategory.event_id.in_(event_ids)).all():
+        categories_by_event.setdefault(category.event_id, []).append(category)
+
+    expenses_by_event: Dict[str, List[Expense]] = {}
+    for expense in db.query(Expense).filter(Expense.event_id.in_(event_ids)).all():
+        expenses_by_event.setdefault(expense.event_id, []).append(expense)
+
+    tasks_by_event: Dict[str, List[Task]] = {}
+    for task in db.query(Task).filter(Task.event_id.in_(event_ids)).all():
+        tasks_by_event.setdefault(task.event_id, []).append(task)
+
+    plans_by_event: Dict[str, PlanVersion] = {}
+    plans = (
+        db.query(PlanVersion)
+        .filter(PlanVersion.event_id.in_(event_ids))
+        .order_by(PlanVersion.version_number.desc())
+        .all()
+    )
+    for plan in plans:
+        plans_by_event.setdefault(plan.event_id, plan)
+
+    summaries = []
+    for event in events:
+        categories = categories_by_event.get(event.id, [])
+        expenses = expenses_by_event.get(event.id, [])
+        tasks = tasks_by_event.get(event.id, [])
+        latest_plan = plans_by_event.get(event.id)
+
+        total_budget = event.total_budget
+        allocated_budget = sum(category.allocated_amount for category in categories)
+        unallocated_budget = total_budget - allocated_budget
+        actual_expenses = sum(
+            expense.actual_cost if expense.actual_cost is not None else expense.estimated_cost
+            for expense in expenses
+        )
+        unspent_budget = total_budget - actual_expenses
+        planning_mode = getattr(event, "planning_mode", "ai")
+        if hasattr(planning_mode, "value"):
+            planning_mode = planning_mode.value
+
+        summaries.append({
+            "id": event.id,
+            "name": event.name,
+            "event_type": event.event_type if isinstance(event.event_type, str) else event.event_type.value,
+            "planning_mode": planning_mode,
+            "event_date": event.event_date,
+            "location": event.location,
+            "guest_count": event.guest_count,
+            "total_budget": total_budget,
+            "allocated_budget": allocated_budget,
+            "unallocated_budget": unallocated_budget,
+            "actual_expenses": actual_expenses,
+            "unspent_budget": unspent_budget,
+            "remaining_budget": unspent_budget,
+            "description": event.description,
+            "status": event.status if isinstance(event.status, str) else event.status.value,
+            "days_remaining": _calculate_days_remaining(event.event_date),
+            "task_count": len(tasks),
+            "completed_tasks": sum(1 for task in tasks if task.status == "completed"),
+            "feasibility_status": latest_plan.feasibility_status if latest_plan else "feasible",
+        })
+
+    return summaries
+
+
 def get_event_summary(db: Session, event_id: str, user_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
     """Get comprehensive event summary with exact budget distinctions."""
     event = get_event(db, event_id, user_id=user_id)
