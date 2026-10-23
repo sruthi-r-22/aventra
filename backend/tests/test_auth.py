@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from app.config import settings
 from app.main import app
 from app.database import Base, get_db
 from app.models.event import Event, EventType, EventStatus
@@ -86,6 +87,34 @@ class TestAuthEndpoints:
         assert resp.status_code == 200
         assert "access_token" in resp.json()
         assert "access_token" in resp.cookies
+
+    def test_auth_cookie_security_attributes_match_when_set_and_cleared(
+        self, client, monkeypatch
+    ):
+        monkeypatch.setattr(settings, "cookie_secure", True)
+        monkeypatch.setattr(settings, "cookie_samesite", "none")
+
+        register_response = client.post(
+            "/api/v1/auth/register",
+            json={
+                "email": "cookie@example.com",
+                "name": "Cookie User",
+                "password": "password123",
+            },
+        )
+        assert register_response.status_code == 201
+        set_cookie = register_response.headers["set-cookie"].lower()
+        assert "; httponly" in set_cookie
+        assert "; secure" in set_cookie
+        assert "; samesite=none" in set_cookie
+
+        logout_response = client.post("/api/v1/auth/logout")
+        assert logout_response.status_code == 200
+        clear_cookie = logout_response.headers["set-cookie"].lower()
+        assert "; httponly" in clear_cookie
+        assert "; secure" in clear_cookie
+        assert "; samesite=none" in clear_cookie
+        assert "max-age=0" in clear_cookie
 
     def test_login_wrong_password(self, client):
         register_user(client, "alice@example.com", "Alice", "mypassword123")

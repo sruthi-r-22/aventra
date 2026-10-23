@@ -1,6 +1,6 @@
 """Tasks API router."""
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from typing import List
 
 from app.database import get_db
@@ -41,7 +41,13 @@ def list_tasks(
     db: Session = Depends(get_db)
 ):
     get_user_event_or_404(db, event_id, current_user.id)
-    tasks = db.query(Task).filter(Task.event_id == event_id).order_by(Task.created_at).all()
+    tasks = (
+        db.query(Task)
+        .options(selectinload(Task.dependencies))
+        .filter(Task.event_id == event_id)
+        .order_by(Task.created_at)
+        .all()
+    )
     return [_task_to_response(t) for t in tasks]
 
 

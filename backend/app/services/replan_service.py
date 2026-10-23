@@ -5,7 +5,7 @@ import json
 import logging
 from typing import Dict, Any, Optional
 from datetime import datetime, date
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.models.event import Event
 from app.models.budget import BudgetCategory, Expense
@@ -56,7 +56,12 @@ def preview_replan(
 
     # Get current state snapshot
     categories = db.query(BudgetCategory).filter(BudgetCategory.event_id == event_id).all()
-    tasks = db.query(Task).filter(Task.event_id == event_id).all()
+    tasks = (
+        db.query(Task)
+        .options(selectinload(Task.dependencies))
+        .filter(Task.event_id == event_id)
+        .all()
+    )
 
     # Parse changes via Gemini or fallback
     parsed = gemini_service.parse_replan_request(

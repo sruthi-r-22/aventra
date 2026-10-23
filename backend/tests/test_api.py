@@ -12,7 +12,8 @@ from app.main import app
 from app.database import Base, get_db
 from app.models.budget import BudgetCategory, Expense
 from app.models.plan import PlanVersion
-from app.models.task import Task, TaskStatus
+from app.models.task import Task, TaskDependency, TaskStatus
+from app.services import event_service, replan_service
 
 # Use in-memory SQLite for tests
 TEST_DATABASE_URL = "sqlite:///./test_aventra.db"
@@ -50,6 +51,30 @@ def client():
     token = resp.json()["access_token"]
     c.headers["Authorization"] = f"Bearer {token}"
     return c
+
+
+def add_task_dependency_chain(event_id, task_count=10):
+    db = TestingSessionLocal()
+    try:
+        tasks = [
+            Task(
+                event_id=event_id,
+                name=f"Dependency task {index}",
+                due_date=(date.today() + timedelta(days=30 + index)).isoformat(),
+                duration_days=1,
+            )
+            for index in range(task_count)
+        ]
+        db.add_all(tasks)
+        db.flush()
+        db.add_all(
+            TaskDependency(task_id=tasks[index].id, depends_on_id=tasks[index - 1].id)
+            for index in range(1, task_count)
+        )
+        db.commit()
+        return [task.id for task in tasks]
+    finally:
+        db.close()
 
 
 @pytest.fixture
@@ -317,6 +342,64 @@ class TestTaskAPI:
         assert resp.status_code == 200
         assert isinstance(resp.json(), list)
 
+    def test_list_tasks_batches_dependency_loading(
+        self, client, sample_event_data, monkeypatch
+    ):
+        event_id = self._create_event(
+            client, {**sample_event_data, "planning_mode": "manual"}
+        )
+        task_ids = add_task_dependency_chain(event_id)
+        monkeypatch.setitem(app.dependency_overrides, get_db, override_get_db)
+        query_count = {"total": 0, "dependency_selects": 0}
+
+        def count_query(conn, cursor, statement, parameters, context, executemany):
+            if statement.lstrip().upper().startswith("SELECT"):
+                query_count["total"] += 1
+                if "task_dependencies" in statement.lower():
+                    query_count["dependency_selects"] += 1
+
+        sqlalchemy_event.listen(engine, "before_cursor_execute", count_query)
+        try:
+            response = client.get(f"/api/v1/events/{event_id}/tasks/")
+        finally:
+            sqlalchemy_event.remove(engine, "before_cursor_execute", count_query)
+
+        assert response.status_code == 200
+        tasks = response.json()
+        assert [task["id"] for task in tasks] == task_ids
+        assert tasks[0]["dependency_ids"] == []
+        assert [
+            task["dependency_ids"] for task in tasks[1:]
+        ] == [[task_ids[index]] for index in range(9)]
+        assert query_count == {"total": 4, "dependency_selects": 1}
+
+    def test_plan_validation_batches_dependency_loading(
+        self, client, sample_event_data, monkeypatch
+    ):
+        event_data = {**sample_event_data, "planning_mode": "manual"}
+        event_id = self._create_event(client, event_data)
+        task_ids = add_task_dependency_chain(event_id)
+        monkeypatch.setitem(app.dependency_overrides, get_db, override_get_db)
+        query_count = {"total": 0, "dependency_selects": 0}
+
+        def count_query(conn, cursor, statement, parameters, context, executemany):
+            if statement.lstrip().upper().startswith("SELECT"):
+                query_count["total"] += 1
+                if "task_dependencies" in statement.lower():
+                    query_count["dependency_selects"] += 1
+
+        sqlalchemy_event.listen(engine, "before_cursor_execute", count_query)
+        try:
+            response = client.post(f"/api/v1/events/{event_id}/validate")
+        finally:
+            sqlalchemy_event.remove(engine, "before_cursor_execute", count_query)
+
+        assert response.status_code == 200
+        schedule = response.json()["scheduling"]["schedule"]
+        assert schedule[task_ids[1]]["start_date"] > schedule[task_ids[0]]["end_date"]
+        assert query_count["dependency_selects"] == 1
+        assert query_count["total"] <= 8
+
     def test_create_task(self, client, sample_event_data):
         event_id = self._create_event(client, sample_event_data)
         task_data = {
@@ -389,6 +472,81 @@ class TestReplanAPI:
         assert "original_plan" in data
         assert "revised_plan" in data
         assert "feasibility_status" in data
+
+    def test_replan_preview_batches_dependency_loading(
+        self, client, sample_event_data, monkeypatch
+    ):
+        event_data = {**sample_event_data, "planning_mode": "manual"}
+        event_id = self._create_event(client, event_data)
+        task_ids = add_task_dependency_chain(event_id)
+        monkeypatch.setitem(app.dependency_overrides, get_db, override_get_db)
+        query_count = {"total": 0, "dependency_selects": 0}
+
+        def count_query(conn, cursor, statement, parameters, context, executemany):
+            if statement.lstrip().upper().startswith("SELECT"):
+                query_count["total"] += 1
+                if "task_dependencies" in statement.lower():
+                    query_count["dependency_selects"] += 1
+
+        sqlalchemy_event.listen(engine, "before_cursor_execute", count_query)
+        try:
+            response = client.post(
+                f"/api/v1/events/{event_id}/replan/preview",
+                json={
+                    "change_description": "Keep the event budget unchanged",
+                    "new_guest_count": event_data["guest_count"] + 1,
+                },
+            )
+        finally:
+            sqlalchemy_event.remove(engine, "before_cursor_execute", count_query)
+
+        assert response.status_code == 200
+        schedule = response.json()["feasibility_details"]["scheduling"]["schedule"]
+        assert schedule[task_ids[1]]["start_date"] > schedule[task_ids[0]]["end_date"]
+        assert query_count["dependency_selects"] == 1
+        assert query_count["total"] <= 12
+
+    def test_replan_preview_unexpected_error_is_generic(
+        self, client, sample_event_data, monkeypatch, caplog
+    ):
+        event_id = self._create_event(client, sample_event_data)
+        internal_detail = "sensitive failure detail"
+
+        def fail_preview(*args, **kwargs):
+            raise RuntimeError(internal_detail)
+
+        monkeypatch.setattr(replan_service, "preview_replan", fail_preview)
+        response = client.post(
+            f"/api/v1/events/{event_id}/replan/preview",
+            json={"change_description": "Change the event budget"},
+        )
+
+        assert response.status_code == 500
+        assert response.json()["detail"] == "Replan preview failed"
+        assert internal_detail not in response.text
+        assert "Unexpected error during replan preview" in caplog.text
+        assert internal_detail not in caplog.text
+
+    def test_replan_accept_unexpected_error_is_generic(
+        self, client, sample_event_data, monkeypatch, caplog
+    ):
+        event_id = self._create_event(client, sample_event_data)
+        internal_detail = "sensitive failure detail"
+
+        def fail_accept(*args, **kwargs):
+            raise RuntimeError(internal_detail)
+
+        monkeypatch.setattr(replan_service, "accept_replan", fail_accept)
+        response = client.post(
+            f"/api/v1/events/{event_id}/replan/accept",
+            json={"preview_token": "preview-token"},
+        )
+
+        assert response.status_code == 500
+        assert response.json()["detail"] == "Failed to accept replan"
+        assert internal_detail not in response.text
+        assert "Unexpected error while accepting replan" in caplog.text
+        assert internal_detail not in caplog.text
 
     def test_replan_original_unchanged_before_accept(self, client, sample_event_data):
         """Original plan must not be modified before user accepts the replan."""
@@ -625,6 +783,48 @@ class TestReplanAPI:
 
 
 class TestManualAndAIDraftPlanner:
+    def test_event_creation_unexpected_error_is_generic(
+        self, client, sample_event_data, monkeypatch, caplog
+    ):
+        internal_detail = "sensitive failure detail"
+
+        def fail_create(*args, **kwargs):
+            raise RuntimeError(internal_detail)
+
+        monkeypatch.setattr(event_service, "create_event", fail_create)
+        response = client.post("/api/v1/events/", json=sample_event_data)
+
+        assert response.status_code == 500
+        assert response.json()["detail"] == "Failed to create event"
+        assert internal_detail not in response.text
+        assert "Unexpected error creating event" in caplog.text
+        assert internal_detail not in caplog.text
+
+    def test_ai_draft_unexpected_error_is_generic(self, client, monkeypatch, caplog):
+        internal_detail = "sensitive failure detail"
+
+        def fail_draft(*args, **kwargs):
+            raise RuntimeError(internal_detail)
+
+        monkeypatch.setattr(event_service, "generate_ai_draft", fail_draft)
+        response = client.post(
+            "/api/v1/events/ai-draft",
+            json={
+                "name": "Graduation Fest",
+                "event_type": "college_fest",
+                "event_date": "2027-10-15",
+                "location": "Auditorium",
+                "guest_count": 300,
+                "total_budget": 300000.0,
+            },
+        )
+
+        assert response.status_code == 500
+        assert response.json()["detail"] == "Failed to generate draft plan"
+        assert internal_detail not in response.text
+        assert "Unexpected error generating AI draft" in caplog.text
+        assert internal_detail not in caplog.text
+
     def test_create_manual_event_no_autogenerated_items(self, client):
         """Manual mode must create an event without invoking LLM or autogenerating tasks/categories."""
         manual_data = {

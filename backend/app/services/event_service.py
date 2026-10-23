@@ -6,7 +6,7 @@ import json
 import logging
 from typing import List, Optional, Dict, Any
 from datetime import date, datetime, timedelta
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.models.event import Event, EventType, EventStatus, PlanningMode
 from app.models.budget import BudgetCategory, Expense
@@ -635,7 +635,12 @@ def validate_event_plan(db: Session, event_id: str, user_id: Optional[str] = Non
         return None
 
     categories = db.query(BudgetCategory).filter(BudgetCategory.event_id == event_id).all()
-    tasks = db.query(Task).filter(Task.event_id == event_id).all()
+    tasks = (
+        db.query(Task)
+        .options(selectinload(Task.dependencies))
+        .filter(Task.event_id == event_id)
+        .all()
+    )
     task_deps = {t.id: [] for t in tasks}
     for task in tasks:
         for dep in task.dependencies:

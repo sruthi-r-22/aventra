@@ -1,8 +1,8 @@
 from sqlalchemy import create_engine
 
-from app.config import Settings
 from app.database import normalize_database_url
 
+from app.config import Settings
 
 def test_sqlite_database_url_is_preserved():
     database_url = "sqlite:///./aventra.db"

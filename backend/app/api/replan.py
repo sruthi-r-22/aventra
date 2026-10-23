@@ -1,4 +1,6 @@
 """Replanning API router."""
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -7,6 +9,8 @@ from app.models.user import User
 from app.schemas.plan import ReplanRequest, AcceptReplanRequest
 from app.services import replan_service
 from app.core.auth import get_current_user, get_user_event_or_404
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/events/{event_id}/replan", tags=["replanning"])
 
@@ -32,8 +36,12 @@ def preview_replan(
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Replan preview failed: {str(e)}")
+    except Exception as exc:
+        logger.error(
+            "Unexpected error during replan preview (exception type: %s)",
+            type(exc).__name__,
+        )
+        raise HTTPException(status_code=500, detail="Replan preview failed") from None
 
 
 @router.post("/accept")
@@ -55,8 +63,12 @@ def accept_replan(
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to accept replan: {str(e)}")
+    except Exception as exc:
+        logger.error(
+            "Unexpected error while accepting replan (exception type: %s)",
+            type(exc).__name__,
+        )
+        raise HTTPException(status_code=500, detail="Failed to accept replan") from None
 
 
 @router.get("/history")

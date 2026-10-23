@@ -1,19 +1,21 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppProvider } from './context/AppContext';
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
 import AuthModal from './components/AuthModal';
-import Dashboard from './pages/Dashboard';
-import MyEvents from './pages/MyEvents';
-import Budget from './pages/Budget';
-import Timeline from './pages/Timeline';
-import Tasks from './pages/Tasks';
-import Vendors from './pages/Vendors';
-import AIWorkspace from './pages/AIWorkspace';
-import LandingPage from './pages/LandingPage';
-import Settings from './pages/Settings';
 import { Lock } from 'lucide-react';
+
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const MyEvents = lazy(() => import('./pages/MyEvents'));
+const Budget = lazy(() => import('./pages/Budget'));
+const Timeline = lazy(() => import('./pages/Timeline'));
+const Tasks = lazy(() => import('./pages/Tasks'));
+const Vendors = lazy(() => import('./pages/Vendors'));
+const AIWorkspace = lazy(() => import('./pages/AIWorkspace'));
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const Settings = lazy(() => import('./pages/Settings'));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading, openAuthModal } = useAuth();
@@ -72,103 +74,123 @@ function AppLayout({ children, hideTopbar }: { children: React.ReactNode; hideTo
   );
 }
 
+function RouteLoadingFallback() {
+  return (
+    <div
+      className="flex min-h-screen items-center justify-center bg-[#FAF9F5] text-[#17252B]"
+      role="status"
+      aria-live="polite"
+    >
+      <div className="flex items-center gap-3 text-sm font-medium text-[#66717A]">
+        <div
+          className="h-6 w-6 animate-spin rounded-full border-2 border-[#164B3D]/20 border-t-[#164B3D]"
+          aria-hidden="true"
+        />
+        Loading Aventra…
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <AppProvider>
         <BrowserRouter>
           <AuthModal />
-          <Routes>
-            {/* Welcome / Landing page — 100% public */}
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/welcome" element={<LandingPage />} />
-            <Route path="/landing" element={<LandingPage />} />
+          <Suspense fallback={<RouteLoadingFallback />}>
+            <Routes>
+              {/* Welcome / Landing page — 100% public */}
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/welcome" element={<LandingPage />} />
+              <Route path="/landing" element={<LandingPage />} />
 
-            {/* Internal Workspace App routes — Protected */}
-            <Route
-              path="/dashboard"
-              element={
-                <AppLayout hideTopbar={true}>
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                </AppLayout>
-              }
-            />
-            <Route
-              path="/events"
-              element={
-                <AppLayout>
-                  <ProtectedRoute>
-                    <MyEvents />
-                  </ProtectedRoute>
-                </AppLayout>
-              }
-            />
-            <Route
-              path="/budget"
-              element={
-                <AppLayout>
-                  <ProtectedRoute>
-                    <Budget />
-                  </ProtectedRoute>
-                </AppLayout>
-              }
-            />
-            <Route
-              path="/timeline"
-              element={
-                <AppLayout>
-                  <ProtectedRoute>
-                    <Timeline />
-                  </ProtectedRoute>
-                </AppLayout>
-              }
-            />
-            <Route
-              path="/tasks"
-              element={
-                <AppLayout>
-                  <ProtectedRoute>
-                    <Tasks />
-                  </ProtectedRoute>
-                </AppLayout>
-              }
-            />
-            <Route
-              path="/vendors"
-              element={
-                <AppLayout>
-                  <ProtectedRoute>
-                    <Vendors />
-                  </ProtectedRoute>
-                </AppLayout>
-              }
-            />
-            <Route
-              path="/ai-workspace"
-              element={
-                <AppLayout>
-                  <ProtectedRoute>
-                    <AIWorkspace />
-                  </ProtectedRoute>
-                </AppLayout>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <AppLayout>
-                  <ProtectedRoute>
-                    <Settings />
-                  </ProtectedRoute>
-                </AppLayout>
-              }
-            />
+              {/* Internal Workspace App routes — Protected */}
+              <Route
+                path="/dashboard"
+                element={
+                  <AppLayout hideTopbar={true}>
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  </AppLayout>
+                }
+              />
+              <Route
+                path="/events"
+                element={
+                  <AppLayout>
+                    <ProtectedRoute>
+                      <MyEvents />
+                    </ProtectedRoute>
+                  </AppLayout>
+                }
+              />
+              <Route
+                path="/budget"
+                element={
+                  <AppLayout>
+                    <ProtectedRoute>
+                      <Budget />
+                    </ProtectedRoute>
+                  </AppLayout>
+                }
+              />
+              <Route
+                path="/timeline"
+                element={
+                  <AppLayout>
+                    <ProtectedRoute>
+                      <Timeline />
+                    </ProtectedRoute>
+                  </AppLayout>
+                }
+              />
+              <Route
+                path="/tasks"
+                element={
+                  <AppLayout>
+                    <ProtectedRoute>
+                      <Tasks />
+                    </ProtectedRoute>
+                  </AppLayout>
+                }
+              />
+              <Route
+                path="/vendors"
+                element={
+                  <AppLayout>
+                    <ProtectedRoute>
+                      <Vendors />
+                    </ProtectedRoute>
+                  </AppLayout>
+                }
+              />
+              <Route
+                path="/ai-workspace"
+                element={
+                  <AppLayout>
+                    <ProtectedRoute>
+                      <AIWorkspace />
+                    </ProtectedRoute>
+                  </AppLayout>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <AppLayout>
+                    <ProtectedRoute>
+                      <Settings />
+                    </ProtectedRoute>
+                  </AppLayout>
+                }
+              />
 
-            {/* Catch-all redirect to welcome / landing */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+              {/* Catch-all redirect to welcome / landing */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
         </BrowserRouter>
       </AppProvider>
     </AuthProvider>
